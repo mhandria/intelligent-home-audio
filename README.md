@@ -1,6 +1,6 @@
-#Sound System
+<h1>Sound System</h1>
 
-this project is for cecs 490A
+this project is for cecs 490A senior design 
 
 by:
 Michael Handria
