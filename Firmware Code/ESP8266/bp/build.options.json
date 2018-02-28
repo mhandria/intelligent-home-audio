@@ -1,0 +1,10 @@
+{
+  "builtInLibrariesFolders": "D:\\Programs\\Program Files (x86)\\Arduino\\libraries",
+  "customBuildProperties": "build.warn_data_percentage=75,runtime.tools.esptool.path=C:\\Users\\Blake\\AppData\\Local\\Arduino15\\packages\\esp8266\\tools\\esptool\\0.4.12,runtime.tools.xtensa-lx106-elf-gcc.path=C:\\Users\\Blake\\AppData\\Local\\Arduino15\\packages\\esp8266\\tools\\xtensa-lx106-elf-gcc\\1.20.0-26-gb404fb9-2,runtime.tools.mkspiffs.path=C:\\Users\\Blake\\AppData\\Local\\Arduino15\\packages\\esp8266\\tools\\mkspiffs\\0.2.0",
+  "fqbn": "esp8266:esp8266:generic:CpuFrequency=80,ResetMethod=ck,CrystalFreq=26,FlashFreq=40,FlashMode=dio,FlashSize=1M64,LwIPVariant=v2mss536,Debug=Disabled,DebugLevel=None____,UploadSpeed=115200",
+  "hardwareFolders": "D:\\Programs\\Program Files (x86)\\Arduino\\hardware,C:\\Users\\Blake\\AppData\\Local\\Arduino15\\packages",
+  "otherLibrariesFolders": "D:\\Libraries\\Documents\\Arduino\\libraries",
+  "runtime.ide.version": "10805",
+  "sketchLocation": "D:\\Libraries\\Google Drive\\Computer Engineering\\Projects\\Senior Project\\ESP8266\\ESP8266_Firmware\\ESP8266_Firmware.ino",
+  "toolsFolders": "D:\\Programs\\Program Files (x86)\\Arduino\\tools-builder,D:\\Programs\\Program Files (x86)\\Arduino\\hardware\\tools\\avr,C:\\Users\\Blake\\AppData\\Local\\Arduino15\\packages"
+}

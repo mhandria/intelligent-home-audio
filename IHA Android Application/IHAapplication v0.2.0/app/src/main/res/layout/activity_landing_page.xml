@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="utf-8"?>
+<android.support.constraint.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    tools:context="handria.com.iha_application.LandingPage">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical"
+        android:gravity="center">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:gravity="center"
+            android:textSize="40dp"
+            android:text="I.H.A"
+            android:textColor="@color/colorPrimary"
+            android:fontFamily="@font/pc"/>
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center"
+            android:textSize="20dp"
+            android:text="Inetlegent Home Audio"
+            android:fontFamily="@font/pc"
+            android:textColor="@color/colorPrimary"/>
+
+        <Button
+            android:id="@+id/singin"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textAllCaps="false"
+            android:gravity="center"
+            android:layout_marginTop="100dp"
+            android:text="\t\t\t\t\t\tSign In\t\t\t\t\t\t"
+            android:background="@drawable/button"
+            android:onClick="signIn"/>
+
+        <Button
+            android:id="@+id/siginup"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textAllCaps="false"
+            android:gravity="center"
+            android:text="\t\t\t\t\t\tSign Up\t\t\t\t\t\t"
+            android:layout_marginTop="30dp"
+            android:background="@drawable/button"
+            android:onClick="signUp"
+            />
+
+
+    </LinearLayout>
+
+</android.support.constraint.ConstraintLayout>
