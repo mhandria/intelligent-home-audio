@@ -1,49 +1,88 @@
-#!/usr/bin/env python3
+from socket import*
+import socket
+import netifaces
+import sys
+import os
 
-import socket 
-from threading import Thread 
-from socketserver import ThreadingMixIn
-import Phone_Client_Thread
-import Speaker_Client_Thread
+# Server code for demo 1
 
-# Multithreaded server for demo 2
+os.system('fuser -k 14123/tcp') #close the port if it happens to be open
+os.system('clear')
 
-#startMain
-
-#Tinkerboard ip setup
 # get info for wlan0
-# ipaddrs = netifaces.ifaddresses('wlan0') # uncomment for tinkerboard
+ipaddrs = netifaces.ifaddresses('wlan0')
 # get wlan0 interface address
-# wlan0 = ipaddrs[2][0]['addr'] #uncomment for tinkerboard
+wlan0 = ipaddrs[2][0]['addr']
 
-#Constants
-#HOST        = wlan0 #uncomment for tinkerboard
-HOST        = '192.168.1.103' #uncomment and set manually for windows operation
-PHONE_PORT  = 14123
-MCU_PORT    = 14124
-BUFFER_SIZE = 1024 
-PHONE_ADDR  = (HOST,PHONE_PORT)
-MCU_ADDR    = (HOST,MCU_PORT)
-#endConstants
+HOST = wlan0
+PORT = 14123
+BUFSIZ = 1024
+ADDR = (HOST, PORT)
 
-print("Hosting Server on {0}...".format(HOST))
+print("Hosting Server on {0}:{1}...".format(HOST,PORT))
 
-threads = [] 
- 
+#create a TCP socket (SOCK_STREAM)
+
+# Socket Family (family=)
+# AF_INET - 90% of sockets use this idk why
+
+# Socket type (type=)
+# SOCK_STREAM - TCP
+# SOCK_DGRAM - UDP
+
+# Protocol (proto=)
+# Usually left as zero - specifies variation of protocol within the socket family
+print('Creating socket...')
+
+server_sock = socket.socket(family=AF_INET, type=SOCK_STREAM)
+server_sock.bind(ADDR)
+server_sock.listen(5)
+server_sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+
+print('Socket created.\n')
+
 while True:
-    #start phone client thread
-    newthread = Phone_Client_Thread()
-    newthread.start()
-    threads.append(newthread)
+    print('Server waiting for connection...')
+    client_sock, addr = server_sock.accept()
+    print('Client connected from: ', addr)
 
-    newthread = Speaker_Client_Thread()
-    newthread.start()
-    threads.append(newthread)
-    while True: # let the threads run forever
-        a = 1
- #endwhile
+    try:
+        client_connected = 1
+        while True:
+            data = client_sock.recv(BUFSIZ) #get data from client
 
-for t in threads:
-    t.join() 
-#endfor
-#endMain
+            data = data.decode('utf-8')
+            data = data.rstrip()
+            
+            print("Client: %s" %data)
+
+            if(data.lower() == 'play a'):
+                print('playing a.wav...')
+                os.system('aplay /home/linaro/Desktop/Source/a.wav')
+                payload = 'played a.wav'
+            elif(data.lower() == 'play b'):
+                print('playing b.wav...')
+                os.system('aplay /home/linaro/Desktop/Source/b.wav')
+                payload = 'played b.wav'
+            else:
+                payload = ' '
+            #endifelse
+
+            client_sock.send(payload.encode('utf-8'))
+        #endwhile1
+        client_sock.close()
+        print('Client socket closed')
+    except ConnectionResetError:
+        client_sock.close()
+        print("Client disconnected")
+    except KeyboardInterrupt:
+        client_sock.close()
+        server_sock.close()
+        print('\n Keyboard interrupt detected. Closing server...')
+        break
+    except BrokenPipeError:
+        client_sock.close()
+        print("Client timed out")
+    #endexcept
+#endwhile0
+server_sock.close()
