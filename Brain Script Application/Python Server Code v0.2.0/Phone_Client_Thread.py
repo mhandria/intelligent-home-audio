@@ -15,9 +15,9 @@ def Phone_Client(ADDR, BUFFER_SIZE):
         #create socket
         try:
             server_sock = socket.socket(family=socket.AF_INET, type=socket.SOCK_STREAM)
+            server_sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
             server_sock.bind(ADDR)
             server_sock.listen(5)
-            server_sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         except:
             print('ERROR: while creating phone socket')
 

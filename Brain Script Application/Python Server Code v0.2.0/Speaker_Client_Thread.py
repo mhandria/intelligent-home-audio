@@ -15,9 +15,9 @@ def Speaker_Client(speaker_number, ADDR, BUFFER_SIZE):
         try:
             #create socket
             server_sock = socket.socket(family=socket.AF_INET, type=socket.SOCK_STREAM)
+            server_sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
             server_sock.bind(ADDR)
             server_sock.listen(5)
-            server_sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         except:
             print('ERROR: While creating speaker socket #{0}'.format(speaker_number))
 

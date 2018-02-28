@@ -3,7 +3,8 @@
   <component name="ProjectModuleManager">
     <modules>
       <module fileurl="file://$PROJECT_DIR$/IHAapplication v0.2.0.iml" filepath="$PROJECT_DIR$/IHAapplication v0.2.0.iml" />
-      <module fileurl="file://$PROJECT_DIR$/app/app.iml" filepath="$PROJECT_DIR$/app/app.iml" />
+      <module fileurl="file://D:\Libraries\Google Drive\Computer Engineering\Projects\Senior Project\Github-repo\IHA Android Application\IHAapplication v0.2.0\IHAapplication v0.2.0.iml" filepath="D:\Libraries\Google Drive\Computer Engineering\Projects\Senior Project\Github-repo\IHA Android Application\IHAapplication v0.2.0\IHAapplication v0.2.0.iml" />
+      <module fileurl="file://D:\Libraries\Google Drive\Computer Engineering\Projects\Senior Project\Github-repo\IHA Android Application\IHAapplication v0.2.0\app\app.iml" filepath="D:\Libraries\Google Drive\Computer Engineering\Projects\Senior Project\Github-repo\IHA Android Application\IHAapplication v0.2.0\app\app.iml" />
     </modules>
   </component>
 </project>
