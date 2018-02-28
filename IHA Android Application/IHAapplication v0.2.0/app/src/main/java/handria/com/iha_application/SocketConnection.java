@@ -34,12 +34,17 @@ public class SocketConnection extends AsyncTask<String, Void, String> {
             _socket.close();
             return "success";
         }catch(IndexOutOfBoundsException iob){
+
             Log.e("CONNECTION", "not enough params...");
             return "error something wrong with connection";
         }catch(IOException e){
 
             Log.e("CONNECTION", "failed to connect to socket");
             return "failed to connect";
+        }catch(Exception e){
+
+            Log.e("PARAMETER", "failed to grab param");
+            return "failed";
         }
     }
 

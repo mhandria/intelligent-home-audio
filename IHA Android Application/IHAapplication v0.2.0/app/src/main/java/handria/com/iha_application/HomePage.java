@@ -30,12 +30,14 @@ public class HomePage extends AppCompatActivity implements onComplete{
     }
 
     public void playB(View view) {
+        updateHostPort();
         SocketConnection _connection = new SocketConnection(this);
         _connection.executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR, hostname, portnumber, "play a");
 
     }
 
     public void playA(View view){
+        updateHostPort();
         SocketConnection _connection = new SocketConnection(this);
         _connection.executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR, hostname, portnumber, "play b");
     }
