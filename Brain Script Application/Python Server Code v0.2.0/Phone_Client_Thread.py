@@ -2,8 +2,12 @@
 import socket
 from threading import Thread 
 from socketserver import ThreadingMixIn
+import sharedMem
 
 def Phone_Client(ADDR, BUFFER_SIZE):
+    global LED0
+    global LED1 # this is broken
+
     print('')
     print('Phone connection thread started')
 
@@ -34,17 +38,32 @@ def Phone_Client(ADDR, BUFFER_SIZE):
 
             #interpret data and set return payload
             if(data.lower() == 'play a'):
-                payload = 'played a.wav'
+                payload = 'Played a...'
+                if(LED0): # toggle LED0
+                    LED0 = 0
+                    print('LED0 turned off')
+                else:
+                    LED0 = 1
+                    print('LED0 turned on')
+                #endelse
             elif(data.lower() == 'play b'):
-                payload = 'played b.wav'
+                payload = 'Playing b...'
+                if(LED1): # toggle LED1
+                    LED1 = 0
+                    print('LED1 turned off')
+                else:
+                    LED1 = 1
+                    print('LED1 turned on')
+                #endelse
             else:
                 payload = 'Invalid Command'
-            #end ifelse
+            #endelse
 
             #send return message
             phone_client_sock.send(payload.encode('utf-8'))
-        except:
+        except Exception as e:
             print('ERROR: Phone unexpectedly disconnected trying again...')
+            print(e)
         
         phone_client_sock.close() # close the socket and do it again
         # repeat forever

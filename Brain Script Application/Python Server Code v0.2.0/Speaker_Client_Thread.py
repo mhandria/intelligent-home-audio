@@ -2,6 +2,7 @@
 import socket
 from threading import Thread 
 from socketserver import ThreadingMixIn
+import sharedMem
 
 def Speaker_Client(speaker_number, ADDR, BUFFER_SIZE):
         print('')

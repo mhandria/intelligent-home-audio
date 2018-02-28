@@ -85,15 +85,15 @@ void init(void)
 // Configure PF1-PF3 as GPIO Output
 void PortF_Init(void)
 {
-	unsigned long volatile delay;
+  unsigned long volatile delay;
   SYSCTL_RCGC2_R |= 0x00000020;      // Activate clock for port F
-	delay = SYSCTL_RCGC2_R;
-	GPIO_PORTF_LOCK_R   =  0x4C4F434B; // unlock GPIO Port F
-	GPIO_PORTF_CR_R     =  0x0E;       // Allow changes to PF1-PF3
+  delay = SYSCTL_RCGC2_R;
+  GPIO_PORTF_LOCK_R   =  0x4C4F434B; // unlock GPIO Port F
+  GPIO_PORTF_CR_R     =  0x0E;       // Allow changes to PF1-PF3
   GPIO_PORTF_DIR_R   |=  0x0E;       // Setup PF1-PF3 as output
   GPIO_PORTF_AFSEL_R &= ~0x0E;       // Disable alt funct on PF1-PF3
   GPIO_PORTF_DEN_R   |=  0x0E;       // Enable PF1-PF3
-	GPIO_PORTF_PCTL_R  &= ~0x0000FFF0; // Configure PF1-PF3 as GPIO
+  GPIO_PORTF_PCTL_R  &= ~0x0000FFF0; // Configure PF1-PF3 as GPIO
   GPIO_PORTF_AMSEL_R &= ~0x0E;       // Disable analog functionality on PF1-PF3
   GPIO_PORTF_PUR_R   &= ~0x0E;       // Enable weak pull-up on PF1-PF3
 }
@@ -160,6 +160,4 @@ void ESP_Init(void)
 	UART0_SendString("ESP8266 Server-Client Connection OK?: ");
 	UART0_SendChar(returnChar);
 	UART0_CRLF();
-	
-	
 }
