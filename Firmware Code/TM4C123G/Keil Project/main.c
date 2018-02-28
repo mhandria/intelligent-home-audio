@@ -48,6 +48,7 @@ unsigned char ESPString [256];
 
 int main(void)
 {
+	unsigned char in;
 	init();
 	
 	UART0_SendString("Entering Main Loop");
@@ -55,9 +56,39 @@ int main(void)
 	
   while(1)
 	{
-		UART1_SendChar('a');
-		SysTick_Wait10ms(500);
-		UART0_SendChar(UART1_GetChar());
+		SysTick_Wait10ms(50); // Every 3 seconds
+		
+		// Inquire if the status of the LEDs has changed
+		UART1_SendChar('?');
+		in = UART1_GetChar();
+		UART0_SendChar(in);
+		
+		switch(in)
+		{
+		  case 'n':
+			{
+				GPIO_PORTF_DATA_R &= ~0x0E; // Turn off LEDs
+				break;
+			}
+			case 'r':
+			{
+				GPIO_PORTF_DATA_R &= ~0x0E; // Turn off LEDs
+				GPIO_PORTF_DATA_R |=  0x02;
+				break;
+			}
+			case 'g':
+			{
+				GPIO_PORTF_DATA_R &= ~0x0E; // Turn off LEDs
+				GPIO_PORTF_DATA_R |=  0x08;
+				break;
+			}
+			case 'y':
+			{
+				GPIO_PORTF_DATA_R &= ~0x0E; // Turn off LEDs
+				GPIO_PORTF_DATA_R |=  0x0C;
+				break;
+			}
+		}
 	}
 }
 
@@ -73,7 +104,6 @@ void init(void)
 	PortD_Init();   // Initialize ESP8266 reset
 	
 	GPIO_PORTF_DATA_R &= ~0x0E; // Turn off LEDs
-	
 	UART0_SendString("USB UART Connection OK");
 	UART0_CRLF();
 	
