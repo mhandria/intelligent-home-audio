@@ -4,7 +4,7 @@ import socket
 import ipaddress as ip
 
 host = input('input server address: ')
-PORT = 14123
+PORT = 14124
 BUFSIZ = 256
 ADDR = (host, PORT)
 
