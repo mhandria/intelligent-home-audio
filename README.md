@@ -1,5 +1,7 @@
 <h1>Intelegent Home Audio</h1>
-<i>v0.2.0</i>
+
+
+![IHA Logo](https://github.com/michael-handria/IHA-IntelligentHomeAudio/blob/master/logo/mainLogo.png "IHA Logo") <i>v0.2.0</i>
 
 Intelegent Home Audio, IHA for short, is a project that is
 trying to recreate the way people play music at home.<br>
