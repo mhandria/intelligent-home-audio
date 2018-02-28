@@ -25,9 +25,15 @@ def Phone_Client(ADDR, BUFFER_SIZE):
 
         print(' ')
         print('Waiting for phone connection...')
-        phone_client_sock, addr = server_sock.accept()
-        print("Phone client connected from {0}...".format(addr))
+        
+        try:
+            phone_client_sock, addr = server_sock.accept()
+        except Exception as e:
+            print(e)
+        #endexcept
 
+        print("Phone client connected from {0}...".format(addr))
+        
         try:
             #get phone payload data
             data = phone_client_sock.recv(BUFFER_SIZE)
@@ -62,7 +68,7 @@ def Phone_Client(ADDR, BUFFER_SIZE):
             #send return message
             phone_client_sock.send(payload.encode('utf-8'))
         except Exception as e:
-            print('ERROR: Phone unexpectedly disconnected trying again...')
+            print('ERROR: Phone unexpectedly disconnected. Trying again...')
             print(e)
         
         phone_client_sock.close() # close the socket and do it again
