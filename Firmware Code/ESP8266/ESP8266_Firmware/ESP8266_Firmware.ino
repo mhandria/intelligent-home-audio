@@ -3,10 +3,10 @@
 #include <FS.h>  // SPIFFS library
 
 // Constants //
-const char* ssid     = "wigglewiggle";
-const char* password = "I|\\|s+@|\\|+_R@m3|\\|_|\\|00d13s";
+const char* ssid     = "Evol";
+const char* password = "turtlebutt";
 
-IPAddress IHA_Server(192,168,1,103);
+IPAddress IHA_Server(192,168,1,248);
 WiFiClient client;
 
 void setup()
