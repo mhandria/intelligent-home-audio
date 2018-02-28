@@ -26,6 +26,7 @@ import sharedMem
 # HOST        = '192.168.1.17'  #uncomment for Blake's Laptop on mobile hotspot
 HOST        = '192.168.1.131' #uncoment for Michael's Laptop.
 
+
 PHONE_PORT  = 14123
 MCU_PORT    = 14124
 BUFFER_SIZE = 1024
