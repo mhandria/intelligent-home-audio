@@ -10,7 +10,8 @@ import android.widget.Toast;
 public class HomePage extends AppCompatActivity implements onComplete{
 
     String hostname;
-    String portnumber;
+    String port = "14123";
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -32,18 +33,17 @@ public class HomePage extends AppCompatActivity implements onComplete{
     public void playB(View view) {
         updateHostPort();
         SocketConnection _connection = new SocketConnection(this);
-        _connection.executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR, hostname, portnumber, "play a");
+        _connection.executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR, hostname, port, "play b");
 
     }
 
     public void playA(View view){
         updateHostPort();
         SocketConnection _connection = new SocketConnection(this);
-        _connection.executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR, hostname, portnumber, "play b");
+        _connection.executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR, hostname, port, "play a");
     }
 
     public void updateHostPort(){
         hostname = ((EditText)findViewById(R.id.hostname)).getText().toString();
-        portnumber = ((EditText)findViewById(R.id.portnumber)).getText().toString();
     }
 }

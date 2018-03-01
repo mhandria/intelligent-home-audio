@@ -31,8 +31,10 @@ public class SocketConnection extends AsyncTask<String, Void, String> {
             BufferedReader buffRead = new BufferedReader(new InputStreamReader(_socket.getInputStream()));
             PrintWriter out = new PrintWriter(_socket.getOutputStream(), true);
             out.println(msg);
+            while(!buffRead.ready());
+            String response = buffRead.readLine();
             _socket.close();
-            return "success";
+            return response;
         }catch(IndexOutOfBoundsException iob){
 
             Log.e("CONNECTION", "not enough params...");
