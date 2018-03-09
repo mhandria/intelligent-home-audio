@@ -4,13 +4,25 @@ import socket
 from threading import Thread 
 from socketserver import ThreadingMixIn
 import sharedMem
+import requests
 
+# Functions #
+def getExtIP():
+    try:
+        extIP = requests.get("https://api.ipify.org").text
+    except Exception as e:
+        print('Phone - ERROR: Failed to get public IP address.')
+        extIP = 'na'
+    #endexcept
+    return extIP
+
+# Main #
 def Phone_Client(ADDR, BUFFER_SIZE):
     global LED0
     global LED1
 
     print('')
-    print('Phone connection thread started')
+    print('Phone - Connection thread started')
 
     while True:
         #create socket
@@ -20,12 +32,12 @@ def Phone_Client(ADDR, BUFFER_SIZE):
             server_sock.bind(ADDR)
             server_sock.listen(5)
         except:
-            print('ERROR: while creating phone socket')
+            print('Phone - ERROR: while creating socket')
 
         #listen until phone opens socket to server
 
         print(' ')
-        print('Waiting for phone connection...')
+        print('Phone - Waiting for phone connection...')
         
         try:
             phone_client_sock, addr = server_sock.accept()
@@ -33,7 +45,7 @@ def Phone_Client(ADDR, BUFFER_SIZE):
             print(e)
         #endexcept
 
-        print("Phone client connected from {0}...".format(addr))
+        print("Phone - Connected from {0}...".format(addr))
         
         try:
             #get phone payload data
@@ -41,35 +53,23 @@ def Phone_Client(ADDR, BUFFER_SIZE):
             data = data.decode('utf-8')
             data = data.rstrip()
 
-            print('Phone client Payload: {0}'.format(data))
+            print('Phone - Command:  {0}'.format(data))
 
-            #interpret data and set return payload
-            if(data.lower() == 'play a'):
-                payload = 'Played a...'
-                if(sharedMem.LED0): # toggle LED0
-                    sharedMem.LED0 = 0
-                    print('LED0 turned off')
-                else:
-                    sharedMem.LED0 = 1
-                    print('LED0 turned on')
-                #endelse
-            elif(data.lower() == 'play b'):
-                payload = 'Playing b...'
-                if(sharedMem.LED1): # toggle LED1
-                    sharedMem.LED1 = 0
-                    print('LED1 turned off')
-                else:
-                    sharedMem.LED1 = 1
-                    print('LED1 turned on')
-                #endelse
+            # interpret command and set return payload
+            if(data.lower() == 'stat'):
+                payload = 'OK'
+            elif(data.lower() == 'getextip'):
+                payload = getExtIP()
             else:
                 payload = 'Invalid Command'
             #endelse
 
+            print('Phone - Response: {0}'.format(payload))
+
             #send return message
             phone_client_sock.send(payload.encode('utf-8'))
         except Exception as e:
-            print('ERROR: Phone unexpectedly disconnected. Trying again...')
+            print('Phone - ERROR: Unexpectedly disconnected. Trying again...')
             print(e)
         
         phone_client_sock.close() # close the socket and do it again

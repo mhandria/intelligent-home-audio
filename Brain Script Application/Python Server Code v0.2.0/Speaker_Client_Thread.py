@@ -12,7 +12,7 @@ def Speaker_Client(speaker_number, ADDR, BUFFER_SIZE):
     global LED1
 
     print('')
-    print('Speaker connection thread #{0} started'.format(speaker_number))
+    print('Speaker - Thread #{0} started'.format(speaker_number))
 
     while True: #tempoary tempoary loop for demo 2
         try:
@@ -22,12 +22,12 @@ def Speaker_Client(speaker_number, ADDR, BUFFER_SIZE):
             server_sock.bind(ADDR)
             server_sock.listen(5)
         except:
-            print('ERROR: While creating speaker socket #{0}'.format(speaker_number))
+            print('Speaker - ERROR: While creating socket #{0}'.format(speaker_number))
 
         #listen until speaker opens socket to server
-        print('Waiting for Speaker connection...')
+        print('Speaker - Waiting for connection...')
         speaker_client_sock, addr = server_sock.accept()
-        print("Speaker client connected from {0}...".format(addr))
+        print("Speaker - Client connected from {0}...".format(addr))
 
         #when a speaker connects, open a new thread to listen for the next speaker
         try:
@@ -35,7 +35,7 @@ def Speaker_Client(speaker_number, ADDR, BUFFER_SIZE):
             # t = Thread(target=Speaker_Client, args=(newThreadNumber, ADDR, BUFFER_SIZE))
             # t.start() #this will never work because it's using the same port, fix sometime after demo 2
         except:
-            print('ERROR: Something went wrong creating a new speakerThread')
+            print('Speaker - ERROR: Something went wrong creating a new speakerThread')
             while True:
                 a = 0
 
@@ -45,7 +45,7 @@ def Speaker_Client(speaker_number, ADDR, BUFFER_SIZE):
                 data = speaker_client_sock.recv(BUFFER_SIZE)
                 data = data.decode('utf-8')
                 data = data.rstrip()
-                print('Speaker client #{0} Payload: {1}'.format(speaker_number,data))
+                print('Speaker - Client #{0} Payload: {1}'.format(speaker_number,data))
 
                 #interpret data and set return payload
                 if(sharedMem.LED0 and sharedMem.LED1):
@@ -63,7 +63,7 @@ def Speaker_Client(speaker_number, ADDR, BUFFER_SIZE):
                 # repeat forever
             #endwhile
         except:
-            print('Speaker client #{0} disconnected'.format(speaker_number))
+            print('Speaker - Client #{0} disconnected'.format(speaker_number))
     speaker_client_sock.close()
     #endwhile
 #endSpeaker_Client
