@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# Thread for listening for mobile application commands 
 import socket
 from threading import Thread 
 from socketserver import ThreadingMixIn

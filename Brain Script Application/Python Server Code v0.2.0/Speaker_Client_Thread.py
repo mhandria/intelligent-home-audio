@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+# Thread that listens for commands from the speaker embeded system
+# Currently only supports 1 speaker
+
 import socket
 from threading import Thread 
 from socketserver import ThreadingMixIn

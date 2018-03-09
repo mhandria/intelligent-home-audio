@@ -2,6 +2,9 @@
 #include "UART.h"
 #include <stdio.h>
 
+// Functions for initializing and using UART on the TM4C123G
+// Some functions are specifically for the IHA speaker network
+
 // Initialize UART0 (Port A) - USB
 void UART0_Init(void)
 {

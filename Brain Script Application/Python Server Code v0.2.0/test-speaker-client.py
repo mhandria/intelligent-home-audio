@@ -1,3 +1,5 @@
+# file for testing interaction with the server without need
+# to program MCU
 import os
 from socket import*
 import socket

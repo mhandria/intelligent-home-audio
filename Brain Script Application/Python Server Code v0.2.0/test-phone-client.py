@@ -1,3 +1,5 @@
+# file for testing interaction with the server without need
+# to program the phone
 import os
 from socket import*
 import socket
