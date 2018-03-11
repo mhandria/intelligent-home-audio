@@ -16,6 +16,7 @@ bool debug_enable;
 WiFiClient client;
 IPAddress IHA_Server;
 
+// Runs after reset //
 void setup()
 {
   debug_enable = 0; // Debug is off by default
@@ -24,6 +25,7 @@ void setup()
   client_init();
 }
 
+// Main program loop, runs after setup //
 void loop()
 {
   unsigned char in;
@@ -43,6 +45,11 @@ void loop()
   }
 }
 
+//                          //
+//                          //
+// Initialization Functions //
+//                          //
+//                          //
 void UART_init()
 {
   unsigned char in = ' ';
@@ -160,6 +167,11 @@ void client_init()
   debugLine("Connected!");
 }
 
+//                          //
+//                          //
+// IP Calculation Functions //
+//                          //
+//                          //
 void findServerIP()
 {
   debugLine(" ");
@@ -234,13 +246,13 @@ void findServerIP()
       if(client.connect(server, 14124))
       { // check if the IHA port is open
         debugLine(" ");
-        debugStr("Connected to");
+        debugStr("Connected to ");
         debugPrintAddr(currAddr);
         debugLine(":14124");
         // If the port is open check the response of the "stat" command
         client.print("stat");
         
-        delay(20);
+        delay(500);
         while(client.available() > 0)
         {
           if(client.read() == 'y' && search == true)
@@ -346,7 +358,11 @@ bool IPAddr_isEqual(uint8_t addr0[4], uint8_t addr1[4])
   return true;
 }
 
-
+//                          //
+//                          //
+//      I/O Functions       //
+//                          //
+//                          //
 unsigned char getMCUChar()
 {
   unsigned char in;
@@ -363,6 +379,11 @@ unsigned char getServerChar()
   return in;
 }
 
+//                          //
+//                          //
+//      Debug Functions     //
+//                          //
+//                          //
 void debugLine(String str)
 {
   if(debug_enable)

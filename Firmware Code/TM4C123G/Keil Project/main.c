@@ -68,7 +68,6 @@ int main(void)
 // Initialize clock, I/O, and variables
 void init(void)
 {
-	while(true);
 	DisableInterrupts();
 	PLL_Init();     // 50Mhz clock
 	SysTick_Init(); // For delay sequences
@@ -79,6 +78,8 @@ void init(void)
 	
 	UART0_SendString("USB UART Connection OK");
 	UART0_CRLF();
+	
+	GPIO_PORTF_DATA_R &= ~0x0E; // Turn off LEDs
 	
 	ESP_Init();
 	
@@ -141,7 +142,7 @@ void ESP_Init(void)
 	}
 	
 	GPIO_PORTF_DATA_R &= ~0x0E; // Turn off LEDs
-	GPIO_PORTF_DATA_R |=  0x08; // RED LED = ESP8266 Serial Comm OK
+	GPIO_PORTF_DATA_R |=  0x02; // RED LED = Connected to IHA Server
 	
 	UART0_SendString("Reset ESP8266");
 	UART0_CRLF();
@@ -162,7 +163,7 @@ void ESP_Init(void)
 	UART0_CRLF();
 	
 	GPIO_PORTF_DATA_R &= ~0x0E; // Turn off LEDs
-	GPIO_PORTF_DATA_R |=  0x02; // GREEN LED = Connected to IHA Server
+	GPIO_PORTF_DATA_R |=  0x08; // Green LED = ESP8266 Serial Comm OK
 	
 	UART0_SendString("Entering Main Loop");
 	UART0_CRLF();
