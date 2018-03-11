@@ -43,6 +43,18 @@ void loop()
     in = Serial.read();
     client.write(in);
   }
+  /*
+  if(!client.connected())
+  {
+    debugLine("The connection with the server has been lost. Reconnecting...");
+    Serial.write('!');
+    // If we're disconnected try to reconnect forever
+    clientReconnect();
+    debugLine("The connection with the server has been restored");
+    Serial.write('y');
+  }
+  */
+  // TODO: Check if Wi-Fi disconnected, if so, reconnect and update MCU LED
 }
 
 //                          //
@@ -55,14 +67,15 @@ void UART_init()
   unsigned char in = ' ';
   // Start the Serial communication to send messages to the MCU
   Serial.begin(115200);
-  
+
+  /*
   // Handshake with the MCU to let it know the program is ready
   while(in != 'b')
   {
     delay(2000); // Try handshake every 2 seconds
     
     Serial.print('a'); // start handshake
-    delay(100);
+    delay(200);
     if(Serial.available() > 0)
     {
       in = getMCUChar();
@@ -75,8 +88,24 @@ void UART_init()
       debugLine("Serial debug enabled");
     }
   }
-  delay(100);
+  delay(200);
   Serial.print('c');
+  delay(200);
+
+  Serial.print('a');
+  Serial.print('b');
+  Serial.print('c');
+  */
+
+  while(in != 'c')
+  {
+    in = getMCUChar();
+    if(in == 'a')
+    {
+      Serial.write('b');
+      in = getMCUChar();
+    }
+  }
   
   debugLine(" ");
   debugLine("Handshake completed");
@@ -90,7 +119,7 @@ void wifi_init()
   debugLine("Using password: " + String(password));
   
   WiFi.begin(ssid, password);
-
+  
   while (WiFi.status() != WL_CONNECTED)
   { // Wait for the Wi-Fi to connect
     delay(1000);
@@ -358,6 +387,17 @@ bool IPAddr_isEqual(uint8_t addr0[4], uint8_t addr1[4])
   return true;
 }
 
+// Runs if the ESP8266 main loop detects the client is //
+// no longer connected to the server //
+void clientReconnect()
+{
+  bool result;
+  while(result == false)
+  {
+    result = client.connect(IHA_Server, 14124);
+    delay(3000); // try again in 3 seconds
+  }
+}
 //                          //
 //                          //
 //      I/O Functions       //

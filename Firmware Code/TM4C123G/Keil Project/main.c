@@ -56,12 +56,26 @@ int main(void)
   
 	while(1)
 	{
-		SysTick_Wait10ms(50); // Every half second
+		SysTick_Wait10ms(100); // Every Second
 		
 		// Inquire if the status of the LEDs has changed
 		UART1_SendChar('?');
 		in = UART1_GetChar();
 		UART0_SendChar(in);
+		
+		if(in == '!')
+		{
+			GPIO_PORTF_DATA_R &= ~0x0E;
+			GPIO_PORTF_DATA_R |=  0x04; // BLUE LED = Connected to Wi-Fi Network
+			
+			in = UART1_GetChar(); // Should send 'y', that would mean reconnected
+			UART0_SendChar(in);
+			
+			GPIO_PORTF_DATA_R &= ~0x0E;
+			GPIO_PORTF_DATA_R |=  0x08; // Green LED = ESP8266 Serial Comm OK
+		}
+		
+		
 	}
 }
 
@@ -123,32 +137,51 @@ void ESP_Init(void)
 	in = ' ';
 	
 	// TODO: Attatch this to mosfet so it resets properly
-	GPIO_PORTD_DATA_R &= ~0x80; // Assert ESP8266 Reset
-	SysTick_Wait10ms(5);
-	GPIO_PORTD_DATA_R |=  0x80; // Deassert ESP8266 Reset
+	// GPIO_PORTD_DATA_R &= ~0x80; // Assert ESP8266 Reset
+	// SysTick_Wait10ms(5);
+	// GPIO_PORTD_DATA_R |=  0x80; // Deassert ESP8266 Reset
 	
 	UART0_SendString("Reset ESP8266");
 	UART0_CRLF();
 	
 	// Handshake
-	while(in != 'c')
+	
+	while(in != 'b')
 	{
-		in = UART1_GetChar();
-		if(in == 'a')
-		{
-			UART1_SendChar('b');
-			in = UART1_GetChar();
+		SysTick_Wait10ms(20); // Every 2 seconds
+		UART1_SendChar('a');
+		UART0_SendChar('a');
+		
+		if((UART1_FR_R&UART_FR_RXFE) == 0)
+		{ // If we recieved data back, get  it
+			in = (unsigned char)(UART1_DR_R&0xFF);
+			UART0_SendChar(in);
 		}
 	}
 	
-	GPIO_PORTF_DATA_R &= ~0x0E; // Turn off LEDs
-	GPIO_PORTF_DATA_R |=  0x02; // RED LED = Connected to IHA Server
+	SysTick_Wait10ms(20);
+	UART1_SendChar('c');
 	
-	UART0_SendString("Reset ESP8266");
+	/*
+	while(UART1_GetChar() != 'a');
+	while(UART1_GetChar() != 'b');
+	while(UART1_GetChar() != 'c');
+	*/
+	
+	UART0_SendString("ESP8266 Serial Handshake Completed");
 	UART0_CRLF();
 	
+	GPIO_PORTF_DATA_R &= ~0x0E; // Turn off LEDs
+	GPIO_PORTF_DATA_R |=  0x02; // RED LED = Serial Connection Established
+	
 	// Wi-Fi connected char
-	returnChar = UART1_GetChar();
+	returnChar = ' ';
+	while(returnChar != 'Y')
+	{
+		returnChar = UART1_GetChar();
+		// UART0_SendChar(returnChar);
+	}
+	
 	UART0_SendString("ESP8266 Wi-Fi Connection OK?: ");
 	UART0_SendChar(returnChar);
 	UART0_CRLF();
@@ -157,13 +190,20 @@ void ESP_Init(void)
 	GPIO_PORTF_DATA_R |=  0x04; // BLUE LED = Connected to Wi-Fi Network
 	
 	// Server connected char
-	returnChar = UART1_GetChar();
+	
+	returnChar = ' ';
+	while(returnChar != 'Y')
+	{
+		returnChar = UART1_GetChar();
+		// UART0_SendChar(returnChar);
+	}
+	
 	UART0_SendString("ESP8266 Server-Client Connection OK?: ");
 	UART0_SendChar(returnChar);
 	UART0_CRLF();
 	
 	GPIO_PORTF_DATA_R &= ~0x0E; // Turn off LEDs
-	GPIO_PORTF_DATA_R |=  0x08; // Green LED = ESP8266 Serial Comm OK
+	GPIO_PORTF_DATA_R |=  0x08; // Green LED = ESP8266 Connection to IHA Server
 	
 	UART0_SendString("Entering Main Loop");
 	UART0_CRLF();
