@@ -38,6 +38,7 @@ BUFFER_SIZE = 1024
 PHONE_ADDR  = (HOST,PHONE_PORT)
 MCU_ADDR    = (HOST,MCU_PORT)
 #endConstants
+#TODO: Replace with socket.
 
 sharedMem.init()
 
@@ -49,6 +50,26 @@ phoneThread.start()
 
 time.sleep(1)
 
-speakerThread = Thread(target=Speaker_Client, args=(0, MCU_ADDR, BUFFER_SIZE))
-speakerThread.start()
+#speakerThread = Thread(target=Speaker_Client, args=(0, MCU_ADDR, BUFFER_SIZE))
+#speakerThread.start()
 #endMain
+
+#experimental
+s = socket.socket()         # Create a socket object
+host = socket.gethostname() # Get local machine name
+
+print(' ')
+print('Server is listening for speaker clients...')
+
+s.bind(MCU_ADDR)        # Bind to the port
+s.listen(5)             # Now wait for client connection.
+
+speakerNumber = 0
+while True:
+   client, addr = s.accept()     # Establish connection with client.
+   t = Thread(target=Speaker_Client, args=(client, speakerNumber, addr, BUFFER_SIZE))
+   t.start()
+
+   speakerNumber = speakerNumber + 1
+#endwhile
+s.close()
