@@ -14,11 +14,12 @@ def Speaker_Client(speaker_number, ADDR, BUFFER_SIZE):
     print('')
     print('Speaker - Thread #{0} started'.format(speaker_number))
 
-    while True: #tempoary tempoary loop for demo 2
+    while True:
         try:
             #create socket
             server_sock = socket.socket(family=socket.AF_INET, type=socket.SOCK_STREAM)
             server_sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+            # try SO_REUSEPORT
             server_sock.bind(ADDR)
             server_sock.listen(5)
         except:
@@ -32,8 +33,8 @@ def Speaker_Client(speaker_number, ADDR, BUFFER_SIZE):
         #when a speaker connects, open a new thread to listen for the next speaker
         try:
             newThreadNumber = speaker_number + 1
-            # t = Thread(target=Speaker_Client, args=(newThreadNumber, ADDR, BUFFER_SIZE))
-            # t.start() #this will never work because it's using the same port, fix sometime after demo 2
+            t = Thread(target=Speaker_Client, args=(newThreadNumber, ADDR, BUFFER_SIZE))
+            # t.start()
         except:
             print('Speaker - ERROR: Something went wrong creating a new speakerThread')
             while True:
@@ -45,19 +46,17 @@ def Speaker_Client(speaker_number, ADDR, BUFFER_SIZE):
                 data = speaker_client_sock.recv(BUFFER_SIZE)
                 data = data.decode('utf-8')
                 data = data.rstrip()
-                print('Speaker - Client #{0} Payload: {1}'.format(speaker_number,data))
+                print('Speaker - Client #{0} Payload:  {1}'.format(speaker_number,data))
 
                 #interpret data and set return payload
-                if(sharedMem.LED0 and sharedMem.LED1):
+                #sharedMem.LED0 
+                if(data == 'stat'):
                     payload = 'y'
-                elif(sharedMem.LED0):
-                    payload = 'r'
-                elif(sharedMem.LED1):
-                    payload = 'g'
                 else:
                     payload = 'n'
                 #endelse
 
+                print('Speaker - Client #{0} Response: {1}'.format(speaker_number,payload))
                 #send return message and close the socket
                 speaker_client_sock.send(payload.encode('utf-8'))
                 # repeat forever

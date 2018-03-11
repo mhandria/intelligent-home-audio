@@ -22,7 +22,7 @@ def Phone_Client(ADDR, BUFFER_SIZE):
     global LED1
 
     print('')
-    print('Phone - Connection thread started')
+    print('Phone - Thread started')
 
     while True:
         #create socket
@@ -56,9 +56,9 @@ def Phone_Client(ADDR, BUFFER_SIZE):
             print('Phone - Command:  {0}'.format(data))
 
             # interpret command and set return payload
-            if(data.lower() == 'stat'):
+            if(data == 'stat'):
                 payload = 'OK'
-            elif(data.lower() == 'getextip'):
+            elif(data == 'getExtIP'):
                 payload = getExtIP()
             else:
                 payload = 'Invalid Command'

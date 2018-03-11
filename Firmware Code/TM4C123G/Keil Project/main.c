@@ -30,6 +30,9 @@
 #include "stdbool.h"
 #include <stdio.h>
 
+// Data Structure Section //
+
+
 // Function Prototype Section // 
 
 void DisableInterrupts(void);
@@ -50,51 +53,22 @@ int main(void)
 {
 	unsigned char in;
 	init();
-	
-	UART0_SendString("Entering Main Loop");
-	UART0_CRLF();
-	
-  while(1)
+  
+	while(1)
 	{
-		SysTick_Wait10ms(50); // Every 3 seconds
+		SysTick_Wait10ms(50); // Every half second
 		
 		// Inquire if the status of the LEDs has changed
 		UART1_SendChar('?');
 		in = UART1_GetChar();
 		UART0_SendChar(in);
-		
-		switch(in)
-		{
-		  case 'n':
-			{
-				GPIO_PORTF_DATA_R &= ~0x0E; // Turn off LEDs
-				break;
-			}
-			case 'r':
-			{
-				GPIO_PORTF_DATA_R &= ~0x0E; // Turn off LEDs
-				GPIO_PORTF_DATA_R |=  0x02;
-				break;
-			}
-			case 'g':
-			{
-				GPIO_PORTF_DATA_R &= ~0x0E; // Turn off LEDs
-				GPIO_PORTF_DATA_R |=  0x08;
-				break;
-			}
-			case 'y':
-			{
-				GPIO_PORTF_DATA_R &= ~0x0E; // Turn off LEDs
-				GPIO_PORTF_DATA_R |=  0x0C;
-				break;
-			}
-		}
 	}
 }
 
 // Initialize clock, I/O, and variables
 void init(void)
 {
+	while(true);
 	DisableInterrupts();
 	PLL_Init();     // 50Mhz clock
 	SysTick_Init(); // For delay sequences
@@ -103,7 +77,6 @@ void init(void)
 	PortF_Init();   // Initalize RGB LEDs
 	PortD_Init();   // Initialize ESP8266 reset
 	
-	GPIO_PORTF_DATA_R &= ~0x0E; // Turn off LEDs
 	UART0_SendString("USB UART Connection OK");
 	UART0_CRLF();
 	
@@ -156,7 +129,6 @@ void ESP_Init(void)
 	UART0_SendString("Reset ESP8266");
 	UART0_CRLF();
 	
-	/*
 	// Handshake
 	while(in != 'c')
 	{
@@ -168,15 +140,10 @@ void ESP_Init(void)
 		}
 	}
 	
-	UART0_SendString("ESP8266 Handshake OK");
-	UART0_CRLF();
-	*/
+	GPIO_PORTF_DATA_R &= ~0x0E; // Turn off LEDs
+	GPIO_PORTF_DATA_R |=  0x08; // RED LED = ESP8266 Serial Comm OK
 	
-	// dumb handshake that works
-	while(in != 'a') in = UART1_GetChar();
-	while(in != 'b') in = UART1_GetChar();
-	while(in != 'c') in = UART1_GetChar();
-	UART0_SendString("ESP8266 Init OK");
+	UART0_SendString("Reset ESP8266");
 	UART0_CRLF();
 	
 	// Wi-Fi connected char
@@ -185,9 +152,18 @@ void ESP_Init(void)
 	UART0_SendChar(returnChar);
 	UART0_CRLF();
 	
+	GPIO_PORTF_DATA_R &= ~0x0E; // Turn off LEDs
+	GPIO_PORTF_DATA_R |=  0x04; // BLUE LED = Connected to Wi-Fi Network
+	
 	// Server connected char
 	returnChar = UART1_GetChar();
 	UART0_SendString("ESP8266 Server-Client Connection OK?: ");
 	UART0_SendChar(returnChar);
+	UART0_CRLF();
+	
+	GPIO_PORTF_DATA_R &= ~0x0E; // Turn off LEDs
+	GPIO_PORTF_DATA_R |=  0x02; // GREEN LED = Connected to IHA Server
+	
+	UART0_SendString("Entering Main Loop");
 	UART0_CRLF();
 }
