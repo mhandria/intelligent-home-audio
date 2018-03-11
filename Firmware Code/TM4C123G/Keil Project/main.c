@@ -74,8 +74,6 @@ int main(void)
 			GPIO_PORTF_DATA_R &= ~0x0E;
 			GPIO_PORTF_DATA_R |=  0x08; // Green LED = ESP8266 Serial Comm OK
 		}
-		
-		
 	}
 }
 
@@ -161,12 +159,6 @@ void ESP_Init(void)
 	
 	SysTick_Wait10ms(20);
 	UART1_SendChar('c');
-	
-	/*
-	while(UART1_GetChar() != 'a');
-	while(UART1_GetChar() != 'b');
-	while(UART1_GetChar() != 'c');
-	*/
 	
 	UART0_SendString("ESP8266 Serial Handshake Completed");
 	UART0_CRLF();
