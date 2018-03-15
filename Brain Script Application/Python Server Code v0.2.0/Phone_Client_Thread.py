@@ -5,6 +5,7 @@ from threading import Thread
 from socketserver import ThreadingMixIn
 import sharedMem
 import requests
+import os
 
 # Functions #
 def getExtIP():
@@ -15,6 +16,63 @@ def getExtIP():
         extIP = 'na'
     #endexcept
     return extIP
+#end getExtIP
+
+def playSong(fileName):
+    global isSendingSong
+    global songToSend
+
+    # TODO: make this code less redundant
+    try:
+        if(os.name == 'nt'): #if testing the server on windows
+            # check if the file exists
+            if(os.path.isfile(os.getcwd() + '/library/' + fileName)):
+                #convert the file to mono 16-bit 44.1KHz .wav into /temp/
+                print('Converting ' + fileName)
+                os.system('convert.bat ' + '"' + fileName + '"')
+                print('Converted')
+
+                # set memory to initiate song sending
+                sharedMem.isSendingSong = True
+                sharedMem.songToSend = fileName + '.wav'
+
+                # return sucessful message and continue listening for phone commands
+                returnPayload = 'Playing: ' + fileName
+            else: #if the file name doesn't exist
+                returnPayload = 'ERROR: File "' + fileName + '" does not exist'
+            #endelse
+        else: # otherwise it's the linux server
+            if(os.path.isfile('home/linaro/desktop/library/' + fileName)):
+                #convert the file to mono 16-bit 44.1KHz .wav into /temp/
+                print('Converting ' + fileName)
+                os.system('./convert.sh ' + '"' + fileName + '"')
+                print('Converted')
+
+                # set memory to initiate song sending
+                sharedMem.isSendingSong = True
+                sharedMem.songToSend = fileName + '.wav'
+
+                # return sucessful message and continue listening for phone commands
+                returnPayload = 'Playing: ' + fileName
+                returnPayload = 'Playing: ' + fileName
+            else: #if the file name doesn't exist
+                returnPayload = 'ERROR: File "' + fileName + '" does not exist'
+        #endelse
+    except Exception as e:
+        print('Phone - ERROR: Failed to play "' + fileName + '"')
+        returnPayload = "ERROR: Playing " + fileName
+    #end except
+    return returnPayload
+#end playSong
+
+def stopSong():
+    if(sharedMem.isSendingSong):
+        sharedMem.isSendingSong = False
+        returnPayload = 'OK'
+    else:
+        returnPayload = 'No song is playing'
+    return returnPayload
+#end stopSong
 
 # Main #
 def Phone_Client(ADDR, BUFFER_SIZE):
@@ -60,6 +118,11 @@ def Phone_Client(ADDR, BUFFER_SIZE):
                 payload = 'OK'
             elif(data == 'getExtIP'):
                 payload = getExtIP()
+            elif(data.startswith('play ')):
+                songName = data.split(' ',1)[1] #parse fileName
+                payload  = playSong(songName)
+            elif(data == 'stop'):
+                payload = stopSong()
             else:
                 payload = 'Invalid Command'
             #endelse

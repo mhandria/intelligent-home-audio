@@ -30,18 +30,18 @@ void loop()
 {
   unsigned char in;
 
-  // Pass data from server to MCU
+  // Check for any data from the server
   if(client.available() > 0)
   {
     in = client.read();
-    Serial.write(in);
+    
   }
 
-  // Pass data from MCU to server
+  // Check for any data from the MCU
   if(Serial.available() > 0)
   {
     in = Serial.read();
-    client.write(in);
+    
   }
   
   if(!client.connected())
