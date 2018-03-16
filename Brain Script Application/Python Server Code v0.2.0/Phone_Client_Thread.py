@@ -45,7 +45,7 @@ def playSong(fileName):
             if(os.path.isfile('/home/linaro/Desktop/library/' + fileName)):
                 #convert the file to mono 16-bit 44.1KHz .wav into /temp/
                 print('Converting ' + fileName)
-                os.system('./convert.sh ' + '"' + fileName + '"')
+                os.system('/home/linaro/Desktop/library/convert.sh ' + '"' + fileName + '"')
                 print('Converted')
 
                 # set memory to initiate song sending

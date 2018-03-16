@@ -63,7 +63,7 @@ def sendSongChunk():
             # the first speaker thread to reach end of file
             # stops the file sending
             sharedMem.isSendingSong = False
-            print('song ending...')
+            print('Song ended on chunk #{0}'.format(round((songFileIndex/SONG_CHUNK_SIZE - 1))))
         else: # if there are more than 1 chunk left
             # the index is the normal chunk size
             songChunkSize = SONG_CHUNK_SIZE
@@ -83,7 +83,7 @@ def sendSongChunk():
 
         print('Speaker - Client #{0} Sent Song Chunk #{1}'.format(SPKN,round((songFileIndex/SONG_CHUNK_SIZE - 1))))
     except Exception as e:
-        print('Speaker - Client #{0} ERROR: Sending Song Chunk #{1}')
+        print('Speaker - Client #{0} ERROR: Sending Song Chunk #{1}'.format(SPKN,round((songFileIndex/SONG_CHUNK_SIZE - 1))))
         print(e)
         payload = 'na'
         CLIENT.send(payload.encode('utf-8'))
