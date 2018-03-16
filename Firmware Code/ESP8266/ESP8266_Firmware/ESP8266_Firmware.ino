@@ -8,8 +8,8 @@ const char* ssid     = "wigglewiggle";
 const char* password = "I|\\|s+@|\\|+_R@m3|\\|_|\\|00d13s";
 
 // Set these two constants to speed up testing //
-const bool manualConnect = false;
-const IPAddress IHA_SERVER(192,168,1,103);
+const bool manualConnect = true;
+const IPAddress IHA_SERVER(192,168,1,112);
 
 // Global Variables //
 bool debug_enable;
@@ -34,7 +34,6 @@ void loop()
   if(client.available() > 0)
   {
     in = client.read();
-    
   }
 
   // Check for any data from the MCU
@@ -43,7 +42,7 @@ void loop()
     in = Serial.read();
     if(in == 's')
     { // if MCU sent 's'
-      playSong(); // request song data forever
+      getSong(); // request song data forever
     }
   }
   
@@ -393,6 +392,28 @@ unsigned char getServerChar()
   return in;
 }
 
+void getSong()
+{
+  int i = 0;
+  while(true)
+  {
+    client.write("songData"); // Prompt for song data
+    debugLine("Getting next chunk...");
+    while(client.available() < 1);  // wait for the chunk
+    while(client.available() > 0)
+    {
+      if(i > 40)
+      {
+        debugLine(" ");
+        i = 0;
+      }
+      debugWrite(client.read());
+      i++;
+    }
+    // get the next song chunk
+  }
+}
+
 //                          //
 //                          //
 //      Debug Functions     //
@@ -413,6 +434,15 @@ void debugStr(String str)
     Serial.print(str);
   }
 }
+
+void debugWrite(byte b)
+{
+  if(debug_enable)
+  {
+    Serial.write(b);
+  }
+}
+
 
 void debugPrintAddr(uint8_t* addr)
 {
