@@ -42,7 +42,7 @@ def playSong(fileName):
                 returnPayload = 'ERROR: File "' + fileName + '" does not exist'
             #endelse
         else: # otherwise it's the linux server
-            if(os.path.isfile('home/linaro/desktop/library/' + fileName)):
+            if(os.path.isfile('/home/linaro/Desktop/library/' + fileName)):
                 #convert the file to mono 16-bit 44.1KHz .wav into /temp/
                 print('Converting ' + fileName)
                 os.system('./convert.sh ' + '"' + fileName + '"')

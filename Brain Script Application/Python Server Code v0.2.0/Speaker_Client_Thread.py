@@ -39,7 +39,7 @@ def sendSongChunk():
         if(os.name == 'nt'): #if windows
             songFile = open(os.getcwd() + '/temp/' + sharedMem.songToSend, 'rb')
         else: #else it's debian
-            songFile = open('home/linaro/desktop/temp/' + sharedMem.songToSend, 'rb')
+            songFile = open('/home/linaro/Desktop/temp/' + sharedMem.songToSend, 'rb')
         
         # get the bytes remaining in the file
         songFile.seek(0, 2)

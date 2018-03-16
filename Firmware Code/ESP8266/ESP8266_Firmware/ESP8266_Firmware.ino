@@ -41,7 +41,10 @@ void loop()
   if(Serial.available() > 0)
   {
     in = Serial.read();
-    
+    if(in == 's')
+    { // if MCU sent 's'
+      playSong(); // request song data forever
+    }
   }
   
   if(!client.connected())

@@ -41,6 +41,7 @@ void init(void);
 void PortF_Init(void);
 void PortD_Init(void);
 void ESP_Init(void);    // Initializes the ESP8266
+void delay_ms(int t);
 
 // Global Variables Section //
 
@@ -53,15 +54,12 @@ int main(void)
 {
 	unsigned char in;
 	init();
-  
+	
+  UART1_SendChar('s'); // MCU is ready to recieve song data
 	while(1)
 	{
-		SysTick_Wait10ms(100); // Every Second
 		
-		// Inquire if the status of the LEDs has changed
-		UART1_SendChar('?');
-		in = UART1_GetChar();
-		UART0_SendChar(in);
+		
 		
 		if(in == '!')
 		{
@@ -81,8 +79,8 @@ int main(void)
 void init(void)
 {
 	DisableInterrupts();
-	PLL_Init();     // 50Mhz clock
-	SysTick_Init(); // For delay sequences
+	PLL_Init();     // 80Mhz clock
+	SysTick_Init(); // For 
 	UART0_Init();   // UART0 initialization - USB
 	UART1_Init();   // UART1 initialization - PB0 Rx - PB1 Tx
 	PortF_Init();   // Initalize RGB LEDs
@@ -136,7 +134,6 @@ void ESP_Init(void)
 	
 	// TODO: Attatch this to mosfet so it resets properly
 	// GPIO_PORTD_DATA_R &= ~0x80; // Assert ESP8266 Reset
-	// SysTick_Wait10ms(5);
 	// GPIO_PORTD_DATA_R |=  0x80; // Deassert ESP8266 Reset
 	
 	UART0_SendString("Reset ESP8266");
@@ -146,7 +143,7 @@ void ESP_Init(void)
 	
 	while(in != 'b')
 	{
-		SysTick_Wait10ms(20); // Every 2 seconds
+		delay_ms(500); // Every half second try the handshake
 		UART1_SendChar('a');
 		UART0_SendChar('a');
 		
@@ -157,7 +154,7 @@ void ESP_Init(void)
 		}
 	}
 	
-	SysTick_Wait10ms(20);
+	delay_ms(100);
 	UART1_SendChar('c');
 	
 	UART0_SendString("ESP8266 Serial Handshake Completed");
@@ -182,7 +179,6 @@ void ESP_Init(void)
 	GPIO_PORTF_DATA_R |=  0x04; // BLUE LED = Connected to Wi-Fi Network
 	
 	// Server connected char
-	
 	returnChar = ' ';
 	while(returnChar != 'Y')
 	{
@@ -199,4 +195,25 @@ void ESP_Init(void)
 	
 	UART0_SendString("Entering Main Loop");
 	UART0_CRLF();
+}
+
+// 80Mhz = 12.5ns period
+// 1ms = 80xperiod
+// 80 periods/3periodsperloop = 27 per ms
+void delay_ms(int t)
+{
+	int ulCount;
+	
+	int i;
+	for(i = 0; i <  t; i++)
+	{
+		// Delay 1 ms //
+		ulCount = 26;
+		
+		do
+		{
+			ulCount--;
+		}
+		while(ulCount);
+	}
 }
