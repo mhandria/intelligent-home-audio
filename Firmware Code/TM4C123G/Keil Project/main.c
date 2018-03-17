@@ -8,9 +8,6 @@
 // It is connected to the network via an ESP2866 network interface
 // on UART0
 
-// UART with 115,200 baud rate (assuming 50 MHz UART clock),
-// 8 bit word length, no parity bits, one stop bit, FIFOs enabled
-
 // I/O
 // UART0 - USB Serial Debug
 // PA0 - Tx Output
@@ -58,9 +55,13 @@ int main(void)
   UART1_SendChar('s'); // MCU is ready to recieve song data
 	while(1)
 	{
+		if((UART1_FR_R&UART_FR_RXFE) == 0)
+		{ // If we recieved data back, get  it
+			in = (unsigned char)(UART1_DR_R&0xFF);
+			UART0_SendChar(in); // and echo it
+		}
 		
-		
-		
+		/*
 		if(in == '!')
 		{
 			GPIO_PORTF_DATA_R &= ~0x0E;
@@ -72,6 +73,7 @@ int main(void)
 			GPIO_PORTF_DATA_R &= ~0x0E;
 			GPIO_PORTF_DATA_R |=  0x08; // Green LED = ESP8266 Serial Comm OK
 		}
+		*/
 	}
 }
 
@@ -80,7 +82,7 @@ void init(void)
 {
 	DisableInterrupts();
 	PLL_Init();     // 80Mhz clock
-	SysTick_Init(); // For 
+	// SysTick_Init();
 	UART0_Init();   // UART0 initialization - USB
 	UART1_Init();   // UART1 initialization - PB0 Rx - PB1 Tx
 	PortF_Init();   // Initalize RGB LEDs
@@ -204,16 +206,24 @@ void delay_ms(int t)
 {
 	int ulCount;
 	
-	int i;
-	for(i = 0; i <  t; i++)
-	{
-		// Delay 1 ms //
-		ulCount = 26;
-		
-		do
+	int i, j;
+	
+	// t ms
+	for(j = 0; j < t; j++)
+	{	
+		// 1ms
+		for(i = 0; i <  998; i++)
 		{
-			ulCount--;
+			// Delay 1us //
+			ulCount = 26;
+			
+			do
+			{
+				ulCount--;
+			}
+			while(ulCount);
 		}
-		while(ulCount);
 	}
+		
+	
 }

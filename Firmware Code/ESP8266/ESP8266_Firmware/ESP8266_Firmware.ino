@@ -2,6 +2,7 @@
 #include <WiFiClient.h>
 #include "ESP8266Ping\src\ESP8266Ping.h"
 #include <EEPROM.h>
+#include <Ticker.h>
 
 // Constants //
 const char* ssid     = "wigglewiggle";
@@ -9,20 +10,34 @@ const char* password = "I|\\|s+@|\\|+_R@m3|\\|_|\\|00d13s";
 
 // Set these two constants to speed up testing //
 const bool manualConnect = true;
-const IPAddress IHA_SERVER(192,168,1,112);
+const bool writeManualConnectToEEPROM = true;
+const IPAddress IHA_SERVER(192,168,1,103);
+const int BAUD_RATE = 921600;
 
 // Global Variables //
 bool debug_enable;
 WiFiClient client;
 IPAddress IHA_Server;
+Ticker sampleTick;
+byte sampleArray0 [2048];
+byte sampleArray1 [2048];
+int sampleIndex;
+int chunkLength;
 
 // Runs after reset //
 void setup()
 {
-  debug_enable = 0; // Debug is off by default
+  sampleIndex = 0;
+  ESP.wdtDisable(); // disable the watch dog timer simply because I am a bad programmer
   UART_init();
   wifi_init();
   client_init();
+
+  unsigned char in = ' ';
+  while(in != 's')
+  {
+    in = getMCUChar();
+  }
 }
 
 // Main program loop, runs after setup //
@@ -30,21 +45,7 @@ void loop()
 {
   unsigned char in;
 
-  // Check for any data from the server
-  if(client.available() > 0)
-  {
-    in = client.read();
-  }
-
-  // Check for any data from the MCU
-  if(Serial.available() > 0)
-  {
-    in = Serial.read();
-    if(in == 's')
-    { // if MCU sent 's'
-      getSong(); // request song data forever
-    }
-  }
+  getSong();
   
   if(!client.connected())
   {
@@ -68,8 +69,9 @@ void UART_init()
 {
   unsigned char in = ' ';
   // Start the Serial communication to send messages to the MCU
-  Serial.begin(115200);
-
+  Serial.begin(BAUD_RATE);
+  
+  debug_enable = 0; // Debug is off by default
   while(in != 'c')
   {
     in = getMCUChar();
@@ -77,6 +79,12 @@ void UART_init()
     {
       Serial.write('b');
       in = getMCUChar();
+    }
+    else if(in == 'd' && debug_enable == 0)
+    {
+      debug_enable = 1;
+      debugLine(" ");
+      debugLine("Debug mode enabled");
     }
   }
   
@@ -113,6 +121,17 @@ void client_init()
     // Debug code to speed up testing //
     IHA_Server = IHA_SERVER;
     defaultFlag = 255;
+    if(writeManualConnectToEEPROM)
+    { // write it to EEPROM so that in the future life is easy
+      EEPROM.begin(128);
+      for(int i = 0; i < 4; i++)
+      { // The first 4 bytes in EEPROM are the 4 octets of the IHA_Server IP Address
+        EEPROM.write(i, IHA_SERVER[i]);
+      }
+      EEPROM.write(4,255);
+      EEPROM.commit();
+      EEPROM.end();
+    }
     debugLine("Using constant address set by programmer: " + IHA_Server.toString());
   }
   else
@@ -392,25 +411,34 @@ unsigned char getServerChar()
   return in;
 }
 
+// gets a song chunk from the server
 void getSong()
 {
-  int i = 0;
   while(true)
   {
+    client.flush();
     client.write("songData"); // Prompt for song data
-    debugLine("Getting next chunk...");
-    while(client.available() < 1);  // wait for the chunk
-    while(client.available() > 0)
+    while(client.available() < 1); // wait for the chunk
+    
+    int i = 0;
+    while(client.available() > 0 && i < 2048)
     {
-      if(i > 40)
-      {
-        debugLine(" ");
-        i = 0;
-      }
-      debugWrite(client.read());
+      sampleArray0[i] = client.read();
       i++;
     }
-    // get the next song chunk
+    chunkLength = i;
+    // sendChunk();
+    delay(1);
+  }
+}
+
+// sends a single 16-bit sample to the TM4C123 to be immediately "played"
+void sendChunk()
+{
+  for(int i = 0; i < 2048 && i < chunkLength; i++)
+  {
+    delayMicroseconds(500);
+    Serial.write(sampleArray0[i]);
   }
 }
 
