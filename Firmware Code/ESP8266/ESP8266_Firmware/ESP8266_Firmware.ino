@@ -4,23 +4,29 @@
 #include <EEPROM.h>
 #include <Ticker.h>
 
+// yield()          - lets the processor run background tasks (networking)
+// ESP.wdtDisable() - disables only the software watchdog timer
+// ESP.wdtFeed()    - resets the software and hardware watchdog timers
+
 // Constants //
 const char* ssid     = "wigglewiggle";
 const char* password = "I|\\|s+@|\\|+_R@m3|\\|_|\\|00d13s";
+const int CHUNK_SIZE = 2048;
+// const int BAUD_RATE = 921600;
+const int BAUD_RATE = 115200;
 
-// Set these two constants to speed up testing //
+// Set these three constants to speed up testing //
 const bool manualConnect = true;
 const bool writeManualConnectToEEPROM = true;
 const IPAddress IHA_SERVER(192,168,1,103);
-const int BAUD_RATE = 921600;
 
 // Global Variables //
 bool debug_enable;
 WiFiClient client;
 IPAddress IHA_Server;
 Ticker sampleTick;
-byte sampleArray0 [2048];
-byte sampleArray1 [2048];
+byte sampleArray0 [CHUNK_SIZE];
+// byte sampleArray1 [CHUNK_SIZE];
 int sampleIndex;
 int chunkLength;
 
@@ -32,7 +38,7 @@ void setup()
   UART_init();
   wifi_init();
   client_init();
-
+  
   unsigned char in = ' ';
   while(in != 's')
   {
@@ -44,8 +50,9 @@ void setup()
 void loop()
 {
   unsigned char in;
-
-  getSong();
+  ESP.wdtFeed();
+  
+  getSong(); // TODO: make this return
   
   if(!client.connected())
   {
@@ -108,7 +115,6 @@ void wifi_init()
   }
   
   Serial.print("Y");
-
   debugLine(" ");
   debugLine("Connected!");
 }
@@ -116,6 +122,7 @@ void wifi_init()
 void client_init()
 {
   uint8_t defaultFlag;
+  ESP.wdtFeed();
   if(manualConnect)
   {
     // Debug code to speed up testing //
@@ -132,6 +139,7 @@ void client_init()
       EEPROM.commit();
       EEPROM.end();
     }
+    debugLine(" ");
     debugLine("Using constant address set by programmer: " + IHA_Server.toString());
   }
   else
@@ -146,19 +154,22 @@ void client_init()
     defaultFlag = EEPROM.read(4);
     EEPROM.end();
   }
-
   debugLine(" ");
   if(defaultFlag != 255) debugLine("No stored server address found.");
+  
+  ESP.wdtFeed();
   
   bool result = false;
   int i = 0;
   while(result == false && i < 5)
   {
+    ESP.wdtFeed();
     if(defaultFlag == 255)
     { // if it's not the default EEPROM address
       // then attempt to connect to it 5 times
       if(i == 0) debugLine("Connnecting to IHA_Server @ IP address: " + IHA_Server.toString());
       result = client.connect(IHA_Server, 14124);
+      ESP.wdtFeed();
       if(result == false) debugStr(".");
       delay(3000); // try again in 3 seconds
     }
@@ -175,7 +186,8 @@ void client_init()
     unsigned char in = ' ';
     while(in != 'y')
     {
-      client.write("stat");
+      ESP.wdtFeed();
+      client.write("?");
       delay(100);
       if(client.available() > 0)
       {
@@ -183,9 +195,8 @@ void client_init()
       }
     }
   }
-  
-  Serial.print("Y");
   debugLine("Connected!");
+  Serial.print("Y");
 }
 
 //                          //
@@ -195,6 +206,7 @@ void client_init()
 //                          //
 void findServerIP()
 {
+  ESP.wdtFeed();
   debugLine(" ");
   debugLine("Could not connect to the server");
   debugLine("Finding the IHA_Server Address");
@@ -225,6 +237,7 @@ void findServerIP()
   debugStr("First Usable Address: ");
   debugPrintAddr(firstAddr);
   debugLine(" ");
+  ESP.wdtFeed();
   
   // Calculate last address
   // The the set all bits that aren't part of the mask
@@ -247,6 +260,7 @@ void findServerIP()
   // If they are, check if it's the IHA server with the "stat" command    //
   // Finally, save the server address in nonvolitile memory for next time //
   
+  ESP.wdtFeed();
   debugLine(" ");
   debugLine("Checking addresses for IHA_Server:");
   
@@ -255,6 +269,7 @@ void findServerIP()
   bool search = true;
   while(search)
   {
+    ESP.wdtFeed();
     if(Ping.ping(currAddr, 2)) // ping the current address
     { // If the ping is sucessfuld
       debugLine(" ");
@@ -271,11 +286,12 @@ void findServerIP()
         debugPrintAddr(currAddr);
         debugLine(":14124");
         // If the port is open check the response of the "stat" command
-        client.print("stat");
+        client.print("?");
         
         delay(500);
         while(client.available() > 0)
         {
+          ESP.wdtFeed();
           if(client.read() == 'y' && search == true)
           { // If the server responds correctly, it's the IHA server
             debugLine("It's the IHA_Server");
@@ -301,6 +317,7 @@ void findServerIP()
       }
     }
     
+    ESP.wdtFeed();
     if(IPAddr_isEqual(currAddr, lastAddr))
     { // If that was the last address, start over at the first address in 10 seconds
       debugLine("IHA_Server not found on network, trying again in 10 seconds...");
@@ -398,7 +415,10 @@ void clientReconnect()
 unsigned char getMCUChar()
 {
   unsigned char in;
-  while(Serial.available() < 1) {};
+  while(Serial.available() < 1)
+  {
+    ESP.wdtFeed();
+  }
   in = Serial.read();
   return in;
 }
@@ -406,7 +426,10 @@ unsigned char getMCUChar()
 unsigned char getServerChar()
 {
   unsigned char in;
-  while(client.available() < 1) {};
+  while(client.available() < 1)
+  {
+    ESP.wdtFeed();
+  }
   in = client.read();
   return in;
 }
@@ -416,29 +439,38 @@ void getSong()
 {
   while(true)
   {
+    ESP.wdtFeed();
     client.flush();
-    client.write("songData"); // Prompt for song data
-    while(client.available() < 1); // wait for the chunk
+    client.write("s"); // Prompt for song data
+
+    // wait for the chunk
+    while(client.available() < 1)
+    {
+      ESP.wdtFeed();
+    }
     
     int i = 0;
-    while(client.available() > 0 && i < 2048)
+    while(client.available() > 0 && i < CHUNK_SIZE)
     {
+      ESP.wdtFeed();
       sampleArray0[i] = client.read();
       i++;
     }
+    
+    ESP.wdtFeed();
     chunkLength = i;
     // sendChunk();
-    delay(1);
   }
 }
 
 // sends a single 16-bit sample to the TM4C123 to be immediately "played"
 void sendChunk()
 {
-  for(int i = 0; i < 2048 && i < chunkLength; i++)
+  for(int i = 0; i < CHUNK_SIZE && i < chunkLength; i++)
   {
     delayMicroseconds(500);
     Serial.write(sampleArray0[i]);
+    ESP.wdtFeed();
   }
 }
 

@@ -108,15 +108,15 @@ def Speaker_Client(client, speaker_number, addr, BUFFER_SIZE):
     try:
         while True:
             #get phone payload data
-            data = client.recv(BUFFER_SIZE)
+            data = client.recv(1)
             data = data.decode('utf-8')
             data = data.rstrip()
             print('Speaker - Client #{0} Payload:  {1}'.format(speaker_number,data))
             
             #interpret data and set return payload
-            if(data == 'stat'):
+            if(data == '?'):
                 returnMessage('y')
-            elif(data == 'songData'):
+            elif(data == 's'):
                 sendSongChunk()
             else:
                 returnMessage('n')
