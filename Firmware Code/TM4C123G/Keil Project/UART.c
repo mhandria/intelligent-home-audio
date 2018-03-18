@@ -27,7 +27,7 @@ void UART0_Init(void)
 }
 
 // Initialize UART1 (Port B)
-// UART with 921,600 baud rate (assuming 80 MHz UART clock),
+// UART with 2,764,800 baud rate (assuming 80 MHz UART clock),
 // 8 bit word length, no parity bits, one stop bit, FIFOs enabled
 // Used for serial terminal debug
 void UART1_Init(void)
@@ -37,8 +37,8 @@ void UART1_Init(void)
   SYSCTL_RCGCGPIO_R |= 0x02;  
 	while((SYSCTL_PRGPIO_R&0x02) == 0){};
   UART1_CTL_R &= ~0x01;                 // disable UART
-  UART1_IBRD_R = 5;                     //  IBRD = floor(80,000,000 / (16 * 921,600) = 5
-  UART1_FBRD_R = 27;                    //  FBRD = floor(0.4028 * 64 + 0.5) = 27
+  UART1_IBRD_R = 1;                     //  IBRD = floor(80,000,000 / (16 * 2,764,800)) = 1
+  UART1_FBRD_R = 52;                    //  FBRD = floor(0.80845 * 64 + 0.5) = 52
                                         // 8 bit word length (no parity bits, one stop bit, FIFOs)
   UART1_LCRH_R = (UART_LCRH_WLEN_8|UART_LCRH_FEN);
   UART1_CTL_R |= UART_CTL_UARTEN;       // enable UART

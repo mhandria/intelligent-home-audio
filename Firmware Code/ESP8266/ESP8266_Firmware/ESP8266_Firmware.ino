@@ -1,5 +1,6 @@
 #include <ESP8266WiFi.h>
 #include <WiFiClient.h>
+#include <WiFiUdp.h>
 #include "ESP8266Ping\src\ESP8266Ping.h"
 #include <EEPROM.h>
 #include <Ticker.h>
@@ -12,7 +13,7 @@
 const char* ssid     = "wigglewiggle";
 const char* password = "I|\\|s+@|\\|+_R@m3|\\|_|\\|00d13s";
 const int CHUNK_SIZE = 2048;
-const int BAUD_RATE = 921600;
+const int BAUD_RATE = 2764800;
 // const int BAUD_RATE = 115200; // use for terminal debug in place of MCU communication
 
 // Set these three constants to speed up testing //
@@ -441,8 +442,11 @@ void getSong()
   {
     ESP.wdtFeed();
     client.flush();
-    client.write("s"); // Prompt for song data
 
+    getMCUChar();
+    
+    client.write("s"); // Prompt for song data
+    
     // wait for the chunk
     while(client.available() < 1)
     {

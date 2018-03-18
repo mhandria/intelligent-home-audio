@@ -21,7 +21,6 @@
 // PF1-PF3 - RGB LEDs Output
 
 #include "PLL.h"
-#include "SysTick.h"
 #include "UART.h"
 #include "tm4c123gh6pm.h"
 #include "stdbool.h"
@@ -41,35 +40,44 @@ void PortD_Init(void);
 void ESP_Init(void);    // Initializes the ESP8266
 void pulseLEDs(void);   // Flashy sequence to show the board reset
 void delay_ms(int t);
+void writeBuff(unsigned char in);
+unsigned char readBuff(void);
+void writeDAC(unsigned char out);
+void SysTick_Init(void);           // Executes SysTick_Handler ever x periods
+void SysTick_Handler(void);        // Sends a sample to the the DAC
+
+// Constants Section //
+const unsigned long BUFFER_SIZE = 30000;
+const double SAMPLE_FREQ = 44100;
 
 // Global Variables Section //
 
 unsigned char returnChar;
-unsigned char ESPString [256];
+
+unsigned char sampleBuffer[BUFFER_SIZE];
+unsigned int sampleReadPtr;
+unsigned int sampleWritePtr;
+bool arePtrsMisaligned;
 
 // Function Implementation Section //
 
 int main(void)
 {
 	unsigned char in = ' ';
+	
 	init();
 	
   UART1_SendChar('s'); // MCU is ready to recieve song data
 	while(1)
 	{
 		if((UART1_FR_R&UART_FR_RXFE) == 0)
-		{ // If we recieved data,
-			// TODO: buffer this input and send it out at 44,100Hz
+		{ // when a sample comes, store it in the buffer
 			in = (unsigned char)(UART1_DR_R&0xFF);
-			
-			// Update DAC  values
-			GPIO_PORTB_DATA_R &= ~0xFC;
-			GPIO_PORTB_DATA_R |= in&0xFC;
-			GPIO_PORTD_DATA_R &= ~0x03;
-			GPIO_PORTD_DATA_R |= in&0x03;
+			writeBuff(in);
 		}
 		
 		/*
+		// Check if we disconnected from the server
 		if(in == '!')
 		{
 			GPIO_PORTF_DATA_R &= ~0x0E;
@@ -88,9 +96,12 @@ int main(void)
 // Initialize clock, I/O, and variables
 void init(void)
 {
+	sampleReadPtr = 0;
+	sampleWritePtr = 0;
+	arePtrsMisaligned = false;
+	
 	DisableInterrupts();
 	PLL_Init();     // 80Mhz clock
-	// SysTick_Init();
 	UART0_Init();   // UART0 initialization - USB
 	UART1_Init();   // UART1 initialization - PB0 Rx - PB1 Tx
 	PortF_Init();   // Initalize RGB LEDs
@@ -99,6 +110,8 @@ void init(void)
 	
 	UART0_SendString("USB UART Connection OK");
 	UART0_CRLF();
+	
+	SysTick_Init(); // Setup timer for playing samples
 	
 	pulseLEDs();
 	
@@ -238,6 +251,113 @@ void ESP_Init(void)
 	UART0_CRLF();
 }
 
+// Initialize SysTick periodic interrupts
+// Assumes 80Mhz clk
+void SysTick_Init(void)
+{
+	// Calculate how many clock cycles between interrupts
+	unsigned long period = 80000000 / SAMPLE_FREQ;
+	// 44,100Hz = 22.67574us period
+	// 80,000,000 = 0.0125us period
+	// 22.675 / 0.0125 = 1814 clk ticks
+
+	UART0_SendString("Using sample rate of: ");
+	UART0_SendUDec(SAMPLE_FREQ);
+	UART0_CRLF();
+	UART0_SendString("# of clk ticks between interrupts: ");
+	UART0_SendUDec(period);
+	UART0_CRLF();
+	
+  NVIC_ST_CTRL_R = 0;         // disable SysTick during setup
+  NVIC_ST_RELOAD_R = period-1;// reload value
+  NVIC_ST_CURRENT_R = 0;      // any write to current clears it
+  NVIC_SYS_PRI3_R = (NVIC_SYS_PRI3_R&0x00FFFFFF)|0x40000000; // priority 2
+                              // enable SysTick with core clock and interrupts
+  NVIC_ST_CTRL_R = 0x07;
+}
+
+// Interrupt service routine
+void SysTick_Handler(void)
+{
+	writeDAC(readBuff()); // Update the DAC to match the current sample
+}
+
+void writeBuff(unsigned char in)
+{
+	if(sampleWritePtr == sampleReadPtr && arePtrsMisaligned)
+	{ // if the write pointer caught up to the write pointer, 
+		// then drop the sample
+		
+		// TODO: Make it so this doesn't happen, the MCU should only request a chunk from the ESP if there is enough space in the buffer for it
+		//       Currenty, there is no requesting, the esp just sends as fast as it can
+	}
+	else
+	{ // otherwise write to the buffer and update the pointer
+			sampleBuffer[sampleWritePtr] = in;
+		
+			if(sampleWritePtr < BUFFER_SIZE-1)
+			{ // if the pointer isn't at the end, increment
+				sampleWritePtr++;
+			}
+			else
+			{ // Otherwise it loops back to zero
+				sampleWritePtr = 0;
+				// If the write ptr loops back to zero, it means that the write ptr will be a greater value than it
+				arePtrsMisaligned = true;
+			}
+	}
+}
+
+unsigned int counter = 0;
+unsigned char readBuff(void)
+{
+	unsigned char out = 0;
+	
+	if(counter >= 2000)
+	{
+		UART1_SendChar('s');
+		counter = 0;
+	}
+	else
+	{
+		counter++;
+	}
+	
+	if(sampleWritePtr == sampleReadPtr && !arePtrsMisaligned)
+	{ // if the read pointer caught up to the write pointer, 
+		// then play silence
+		
+		out = 128;
+	}
+	else
+	{ // otherwise read the buffer and update the pointer
+			out = sampleBuffer[sampleReadPtr];
+			
+			if(sampleReadPtr < BUFFER_SIZE-1)
+			{ // if the pointer isn't at the end, increment
+				sampleReadPtr++;
+			}
+			else
+			{ // Otherwise it loops back to zero
+				sampleReadPtr = 0;
+				// If the read ptr loops back to zero, it means that the write ptr will be a greater value than it
+				arePtrsMisaligned = false;
+			}
+	}
+	
+	return out;
+}
+
+void writeDAC(unsigned char out)
+{
+	unsigned char in = 0;
+	GPIO_PORTB_DATA_R &= ~0xFC;
+	GPIO_PORTB_DATA_R |= out&0xFC;
+	GPIO_PORTD_DATA_R &= ~0x03;
+	GPIO_PORTD_DATA_R |= out&0x03;
+}
+
+
 // 80Mhz = 12.5ns period
 // 1us = 80xperiod
 // 80 periods/3periodsperloop = 27 per uss
@@ -266,3 +386,4 @@ void delay_ms(int t)
 		
 	
 }
+
