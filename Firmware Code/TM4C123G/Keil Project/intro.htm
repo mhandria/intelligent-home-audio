@@ -3,7 +3,7 @@
 <title>Static Call Graph - [.\intro.axf]</title></head>
 <body><HR>
 <H1>Static Call Graph for image .\intro.axf</H1><HR>
-<BR><P>#&#060CALLGRAPH&#062# ARM Linker, 5060422: Last Updated: Sat Mar 17 22:57:36 2018
+<BR><P>#&#060CALLGRAPH&#062# ARM Linker, 5060422: Last Updated: Sun Mar 18 14:15:07 2018
 <BR><P>
 <H3>Maximum Stack Usage =         28 bytes + Unknown(Functions without stacksize, Cycles, Untraceable Function Pointers)</H3><H3>
 Call chain for Maximum Stack Depth:</H3>
@@ -620,7 +620,7 @@ Global Symbols
 
 <P><STRONG><a name="[a1]"></a>__scatterload_rt2</STRONG> (Thumb, 0 bytes, Stack size 0 bytes, init.o(.text), UNUSED)
 
-<P><STRONG><a name="[82]"></a>ESP_Init</STRONG> (Thumb, 262 bytes, Stack size 8 bytes, main.o(i.ESP_Init))
+<P><STRONG><a name="[82]"></a>ESP_Init</STRONG> (Thumb, 252 bytes, Stack size 8 bytes, main.o(i.ESP_Init))
 <BR><BR>[Stack]<UL><LI>Max Depth = 16<LI>Call Chain = ESP_Init &rArr; delay_ms
 </UL>
 <BR>[Calls]<UL><LI><a href="#[86]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;UART1_SendChar
@@ -678,7 +678,9 @@ Global Symbols
 </UL>
 <BR>[Calls]<UL><LI><a href="#[87]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;UART0_SendChar
 </UL>
-<BR>[Called By]<UL><LI><a href="#[8d]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;init
+<BR>[Called By]<UL><LI><a href="#[97]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;writeBuff
+<LI><a href="#[7c]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;main
+<LI><a href="#[8d]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;init
 <LI><a href="#[8b]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;SysTick_Init
 <LI><a href="#[82]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;ESP_Init
 </UL>
@@ -699,7 +701,9 @@ Global Symbols
 </UL>
 <BR>[Calls]<UL><LI><a href="#[87]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;UART0_SendChar
 </UL>
-<BR>[Called By]<UL><LI><a href="#[8d]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;init
+<BR>[Called By]<UL><LI><a href="#[97]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;writeBuff
+<LI><a href="#[7c]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;main
+<LI><a href="#[8d]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;init
 <LI><a href="#[8b]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;SysTick_Init
 <LI><a href="#[82]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;ESP_Init
 </UL>
@@ -742,7 +746,7 @@ Global Symbols
 <LI><a href="#[82]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;ESP_Init
 </UL>
 
-<P><STRONG><a name="[8d]"></a>init</STRONG> (Thumb, 72 bytes, Stack size 8 bytes, main.o(i.init))
+<P><STRONG><a name="[8d]"></a>init</STRONG> (Thumb, 78 bytes, Stack size 8 bytes, main.o(i.init))
 <BR><BR>[Stack]<UL><LI>Max Depth = 28 + Unknown Stack Size
 <LI>Call Chain = init &rArr; SysTick_Init &rArr; UART0_SendUDec &rArr;  UART0_SendUDec (Cycle)
 </UL>
@@ -763,11 +767,13 @@ Global Symbols
 <BR>[Called By]<UL><LI><a href="#[7c]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;main
 </UL>
 
-<P><STRONG><a name="[7c]"></a>main</STRONG> (Thumb, 38 bytes, Stack size 0 bytes, main.o(i.main))
+<P><STRONG><a name="[7c]"></a>main</STRONG> (Thumb, 58 bytes, Stack size 0 bytes, main.o(i.main))
 <BR><BR>[Stack]<UL><LI>Max Depth = 28 + Unknown Stack Size
 <LI>Call Chain = main &rArr; init &rArr; SysTick_Init &rArr; UART0_SendUDec &rArr;  UART0_SendUDec (Cycle)
 </UL>
 <BR>[Calls]<UL><LI><a href="#[86]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;UART1_SendChar
+<LI><a href="#[83]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;UART0_SendString
+<LI><a href="#[84]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;UART0_CRLF
 <LI><a href="#[97]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;writeBuff
 <LI><a href="#[8d]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;init
 </UL>
@@ -781,7 +787,7 @@ Global Symbols
 <BR>[Called By]<UL><LI><a href="#[8d]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;init
 </UL>
 
-<P><STRONG><a name="[89]"></a>readBuff</STRONG> (Thumb, 106 bytes, Stack size 8 bytes, main.o(i.readBuff))
+<P><STRONG><a name="[89]"></a>readBuff</STRONG> (Thumb, 80 bytes, Stack size 8 bytes, main.o(i.readBuff))
 <BR><BR>[Stack]<UL><LI>Max Depth = 8<LI>Call Chain = readBuff
 </UL>
 <BR>[Calls]<UL><LI><a href="#[86]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;UART1_SendChar
@@ -789,11 +795,16 @@ Global Symbols
 <BR>[Called By]<UL><LI><a href="#[9]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;SysTick_Handler
 </UL>
 
-<P><STRONG><a name="[97]"></a>writeBuff</STRONG> (Thumb, 64 bytes, Stack size 0 bytes, main.o(i.writeBuff))
-<BR><BR>[Called By]<UL><LI><a href="#[7c]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;main
+<P><STRONG><a name="[97]"></a>writeBuff</STRONG> (Thumb, 82 bytes, Stack size 8 bytes, main.o(i.writeBuff))
+<BR><BR>[Stack]<UL><LI>Max Depth = 12<LI>Call Chain = writeBuff &rArr; UART0_SendString
+</UL>
+<BR>[Calls]<UL><LI><a href="#[83]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;UART0_SendString
+<LI><a href="#[84]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;UART0_CRLF
+</UL>
+<BR>[Called By]<UL><LI><a href="#[7c]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;main
 </UL>
 
-<P><STRONG><a name="[8a]"></a>writeDAC</STRONG> (Thumb, 66 bytes, Stack size 0 bytes, main.o(i.writeDAC))
+<P><STRONG><a name="[8a]"></a>writeDAC</STRONG> (Thumb, 64 bytes, Stack size 0 bytes, main.o(i.writeDAC))
 <BR><BR>[Called By]<UL><LI><a href="#[9]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;SysTick_Handler
 </UL>
 <P>

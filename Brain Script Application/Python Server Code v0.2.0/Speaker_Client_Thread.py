@@ -104,6 +104,10 @@ def Speaker_Client(client, speaker_number, addr, BUFFER_SIZE):
     SPKN = speaker_number
     songFileIndex = 44 #this might be off by one
 
+    # create UDP socket for this server
+    
+    
+
     #enter loop for handling client
     try:
         while True:

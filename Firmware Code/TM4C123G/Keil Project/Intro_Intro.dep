@@ -1,6 +1,6 @@
 Dependencies for Project 'Intro', Target 'Intro': (DO NOT MODIFY !)
 F (.\startup.s)(0x5AADF7DC)(--cpu Cortex-M4 --pd "__EVAL SETA 1" -g --apcs=interwork --pd "__MICROLIB SETA 1"-I"D:\Programs\Program Files\Keil_v5\ARM\RV31\INC"-I"D:\Programs\Program Files\Keil_v5\ARM\CMSIS\Include"-I"D:\Programs\Program Files\Keil_v5\ARM\Inc\Luminary"--pd "__UVISION_VERSION SETA 522"--list .\startup.lst --xref -o .\startup.o --depend .\startup.d)
-F (.\main.c)(0x5AADFFCE)(-c --cpu Cortex-M4 -D__EVAL -D__MICROLIB -g -O0 --apcs=interwork --split_sections --signed_chars -I .. -I ..\..\..-I"D:\Programs\Program Files\Keil_v5\ARM\RV31\INC"-I"D:\Programs\Program Files\Keil_v5\ARM\CMSIS\Include"-I"D:\Programs\Program Files\Keil_v5\ARM\Inc\Luminary"-D__UVISION_VERSION="522" -Drvmdk -DPART_LM4F120H5QR-o .\main.o --omf_browse .\main.crf --depend .\main.d)
+F (.\main.c)(0x5AAED6D9)(-c --cpu Cortex-M4 -D__EVAL -D__MICROLIB -g -O0 --apcs=interwork --split_sections --signed_chars -I .. -I ..\..\..-I"D:\Programs\Program Files\Keil_v5\ARM\RV31\INC"-I"D:\Programs\Program Files\Keil_v5\ARM\CMSIS\Include"-I"D:\Programs\Program Files\Keil_v5\ARM\Inc\Luminary"-D__UVISION_VERSION="522" -Drvmdk -DPART_LM4F120H5QR-o .\main.o --omf_browse .\main.crf --depend .\main.d)
 I (PLL.h)(0x5AAB0688)
 I (UART.h)(0x5AA2E802)
 I (tm4c123gh6pm.h)(0x5AA2E802)
@@ -8,7 +8,7 @@ I (D:\Programs\Program Files\Keil_v5\ARM\ARMCC\include\stdbool.h)(0x57F6E7B8)
 I (D:\Programs\Program Files\Keil_v5\ARM\ARMCC\include\stdio.h)(0x57F6E7B8)
 F (.\PLL.c)(0x5AA2E802)(-c --cpu Cortex-M4 -D__EVAL -D__MICROLIB -g -O0 --apcs=interwork --split_sections --signed_chars -I .. -I ..\..\..-I"D:\Programs\Program Files\Keil_v5\ARM\RV31\INC"-I"D:\Programs\Program Files\Keil_v5\ARM\CMSIS\Include"-I"D:\Programs\Program Files\Keil_v5\ARM\Inc\Luminary"-D__UVISION_VERSION="522" -Drvmdk -DPART_LM4F120H5QR-o .\pll.o --omf_browse .\pll.crf --depend .\pll.d)
 I (PLL.h)(0x5AAB0688)
-F (.\UART.c)(0x5AADC769)(-c --cpu Cortex-M4 -D__EVAL -D__MICROLIB -g -O0 --apcs=interwork --split_sections --signed_chars -I .. -I ..\..\..-I"D:\Programs\Program Files\Keil_v5\ARM\RV31\INC"-I"D:\Programs\Program Files\Keil_v5\ARM\CMSIS\Include"-I"D:\Programs\Program Files\Keil_v5\ARM\Inc\Luminary"-D__UVISION_VERSION="522" -Drvmdk -DPART_LM4F120H5QR-o .\uart.o --omf_browse .\uart.crf --depend .\uart.d)
+F (.\UART.c)(0x5AAEC80A)(-c --cpu Cortex-M4 -D__EVAL -D__MICROLIB -g -O0 --apcs=interwork --split_sections --signed_chars -I .. -I ..\..\..-I"D:\Programs\Program Files\Keil_v5\ARM\RV31\INC"-I"D:\Programs\Program Files\Keil_v5\ARM\CMSIS\Include"-I"D:\Programs\Program Files\Keil_v5\ARM\Inc\Luminary"-D__UVISION_VERSION="522" -Drvmdk -DPART_LM4F120H5QR-o .\uart.o --omf_browse .\uart.crf --depend .\uart.d)
 I (tm4c123gh6pm.h)(0x5AA2E802)
 I (UART.h)(0x5AA2E802)
 I (D:\Programs\Program Files\Keil_v5\ARM\ARMCC\include\stdio.h)(0x57F6E7B8)

@@ -49,31 +49,35 @@ void SysTick_Handler(void);        // Sends a sample to the the DAC
 // Constants Section //
 const unsigned long BUFFER_SIZE = 30000;
 const double SAMPLE_FREQ = 44100;
+const unsigned long CHUNK_SIZE = 2048;
 
 // Global Variables Section //
 
 unsigned char returnChar;
 
 unsigned char sampleBuffer[BUFFER_SIZE];
-unsigned int sampleReadPtr;
-unsigned int sampleWritePtr;
+unsigned char *sampleReadPtr;
+unsigned char *sampleWritePtr;
 bool arePtrsMisaligned;
+
+unsigned int counter;
 
 // Function Implementation Section //
 
 int main(void)
 {
-	unsigned char in = ' ';
-	
 	init();
 	
   UART1_SendChar('s'); // MCU is ready to recieve song data
+	
+	UART0_SendString("Entering Main Loop");
+	UART0_CRLF();
 	while(1)
 	{
-		if((UART1_FR_R&UART_FR_RXFE) == 0)
+		while((UART1_FR_R&UART_FR_RXFE) == 0)
 		{ // when a sample comes, store it in the buffer
-			in = (unsigned char)(UART1_DR_R&0xFF);
-			writeBuff(in);
+			writeBuff((unsigned char)(UART1_DR_R&0xFF));
+			counter++;
 		}
 		
 		/*
@@ -96,9 +100,10 @@ int main(void)
 // Initialize clock, I/O, and variables
 void init(void)
 {
-	sampleReadPtr = 0;
-	sampleWritePtr = 0;
+	sampleReadPtr  = &sampleBuffer[0];
+	sampleWritePtr = &sampleBuffer[0];
 	arePtrsMisaligned = false;
+	counter = 0;
 	
 	DisableInterrupts();
 	PLL_Init();     // 80Mhz clock
@@ -246,9 +251,6 @@ void ESP_Init(void)
 	
 	GPIO_PORTF_DATA_R &= ~0x0E; // Turn off LEDs
 	GPIO_PORTF_DATA_R |=  0x08; // Green LED = ESP8266 Connection to IHA Server
-	
-	UART0_SendString("Entering Main Loop");
-	UART0_CRLF();
 }
 
 // Initialize SysTick periodic interrupts
@@ -277,6 +279,8 @@ void SysTick_Init(void)
 }
 
 // Interrupt service routine
+// TODO: Consider only settings flags/variables here and do everything else in the main loop
+//       to prevent long interrupts
 void SysTick_Handler(void)
 {
 	writeDAC(readBuff()); // Update the DAC to match the current sample
@@ -284,62 +288,51 @@ void SysTick_Handler(void)
 
 void writeBuff(unsigned char in)
 {
+	
 	if(sampleWritePtr == sampleReadPtr && arePtrsMisaligned)
-	{ // if the write pointer caught up to the write pointer, 
+	{ // if the write pointer caught up to the read pointer, 
 		// then drop the sample
-		
-		// TODO: Make it so this doesn't happen, the MCU should only request a chunk from the ESP if there is enough space in the buffer for it
-		//       Currenty, there is no requesting, the esp just sends as fast as it can
+		UART0_SendString("Samples came in too fast");
+		UART0_CRLF();
 	}
 	else
 	{ // otherwise write to the buffer and update the pointer
-			sampleBuffer[sampleWritePtr] = in;
-		
-			if(sampleWritePtr < BUFFER_SIZE-1)
+			*sampleWritePtr = in;
+		  
+			if(sampleWritePtr - &sampleBuffer[0] < BUFFER_SIZE-1)
 			{ // if the pointer isn't at the end, increment
 				sampleWritePtr++;
 			}
 			else
 			{ // Otherwise it loops back to zero
-				sampleWritePtr = 0;
+				sampleWritePtr = &sampleBuffer[0];
 				// If the write ptr loops back to zero, it means that the write ptr will be a greater value than it
 				arePtrsMisaligned = true;
 			}
 	}
 }
 
-unsigned int counter = 0;
 unsigned char readBuff(void)
 {
-	unsigned char out = 0;
-	
-	if(counter >= 2000)
-	{
-		UART1_SendChar('s');
-		counter = 0;
-	}
-	else
-	{
-		counter++;
-	}
+	unsigned char out = 127;
 	
 	if(sampleWritePtr == sampleReadPtr && !arePtrsMisaligned)
 	{ // if the read pointer caught up to the write pointer, 
 		// then play silence
-		
-		out = 128;
+		UART1_SendChar('s');
 	}
 	else
 	{ // otherwise read the buffer and update the pointer
-			out = sampleBuffer[sampleReadPtr];
+	
+			out = *sampleReadPtr;
 			
-			if(sampleReadPtr < BUFFER_SIZE-1)
+			if(sampleReadPtr - &sampleBuffer[0] < BUFFER_SIZE-1)
 			{ // if the pointer isn't at the end, increment
 				sampleReadPtr++;
 			}
 			else
 			{ // Otherwise it loops back to zero
-				sampleReadPtr = 0;
+				sampleReadPtr = &sampleBuffer[0];
 				// If the read ptr loops back to zero, it means that the write ptr will be a greater value than it
 				arePtrsMisaligned = false;
 			}
@@ -350,7 +343,6 @@ unsigned char readBuff(void)
 
 void writeDAC(unsigned char out)
 {
-	unsigned char in = 0;
 	GPIO_PORTB_DATA_R &= ~0xFC;
 	GPIO_PORTB_DATA_R |= out&0xFC;
 	GPIO_PORTD_DATA_R &= ~0x03;
@@ -383,7 +375,6 @@ void delay_ms(int t)
 			while(ulCount);
 		}
 	}
-		
 	
 }
 

@@ -13,7 +13,7 @@
 const char* ssid     = "wigglewiggle";
 const char* password = "I|\\|s+@|\\|+_R@m3|\\|_|\\|00d13s";
 const int CHUNK_SIZE = 2048;
-const int BAUD_RATE = 2764800;
+const int BAUD_RATE = 1658880;
 // const int BAUD_RATE = 115200; // use for terminal debug in place of MCU communication
 
 // Set these three constants to speed up testing //
@@ -39,12 +39,6 @@ void setup()
   UART_init();
   wifi_init();
   client_init();
-  
-  unsigned char in = ' ';
-  while(in != 's')
-  {
-    in = getMCUChar();
-  }
 }
 
 // Main program loop, runs after setup //
@@ -437,13 +431,13 @@ unsigned char getServerChar()
 
 // gets a song chunk from the server
 void getSong()
-{
+{  
   while(true)
   {
     ESP.wdtFeed();
     client.flush();
 
-    getMCUChar();
+    while(getMCUChar() != 's');
     
     client.write("s"); // Prompt for song data
     
