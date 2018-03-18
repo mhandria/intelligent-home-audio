@@ -12,8 +12,8 @@
 const char* ssid     = "wigglewiggle";
 const char* password = "I|\\|s+@|\\|+_R@m3|\\|_|\\|00d13s";
 const int CHUNK_SIZE = 2048;
-// const int BAUD_RATE = 921600;
-const int BAUD_RATE = 115200;
+const int BAUD_RATE = 921600;
+// const int BAUD_RATE = 115200; // use for terminal debug in place of MCU communication
 
 // Set these three constants to speed up testing //
 const bool manualConnect = true;
@@ -455,20 +455,19 @@ void getSong()
       ESP.wdtFeed();
       sampleArray0[i] = client.read();
       i++;
-    }
+    } 
     
     ESP.wdtFeed();
     chunkLength = i;
-    // sendChunk();
+    sendChunk();
   }
 }
 
 // sends a single 16-bit sample to the TM4C123 to be immediately "played"
 void sendChunk()
 {
-  for(int i = 0; i < CHUNK_SIZE && i < chunkLength; i++)
+  for(int i = 0; i < chunkLength; i++)
   {
-    delayMicroseconds(500);
     Serial.write(sampleArray0[i]);
     ESP.wdtFeed();
   }

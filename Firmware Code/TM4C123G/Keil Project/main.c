@@ -36,8 +36,10 @@ void DisableInterrupts(void);
 void EnableInterrupts(void);
 void init(void);
 void PortF_Init(void);
+void PortB_Init(void);
 void PortD_Init(void);
 void ESP_Init(void);    // Initializes the ESP8266
+void pulseLEDs(void);   // Flashy sequence to show the board reset
 void delay_ms(int t);
 
 // Global Variables Section //
@@ -49,16 +51,22 @@ unsigned char ESPString [256];
 
 int main(void)
 {
-	unsigned char in;
+	unsigned char in = ' ';
 	init();
 	
   UART1_SendChar('s'); // MCU is ready to recieve song data
 	while(1)
 	{
 		if((UART1_FR_R&UART_FR_RXFE) == 0)
-		{ // If we recieved data back, get  it
+		{ // If we recieved data,
+			// TODO: buffer this input and send it out at 44,100Hz
 			in = (unsigned char)(UART1_DR_R&0xFF);
-			UART0_SendChar(in); // and echo it
+			
+			// Update DAC  values
+			GPIO_PORTB_DATA_R &= ~0xFC;
+			GPIO_PORTB_DATA_R |= in&0xFC;
+			GPIO_PORTD_DATA_R &= ~0x03;
+			GPIO_PORTD_DATA_R |= in&0x03;
 		}
 		
 		/*
@@ -86,16 +94,37 @@ void init(void)
 	UART0_Init();   // UART0 initialization - USB
 	UART1_Init();   // UART1 initialization - PB0 Rx - PB1 Tx
 	PortF_Init();   // Initalize RGB LEDs
-	PortD_Init();   // Initialize ESP8266 reset
+	PortB_Init();
+	PortD_Init();
 	
 	UART0_SendString("USB UART Connection OK");
 	UART0_CRLF();
 	
-	GPIO_PORTF_DATA_R &= ~0x0E; // Turn off LEDs
+	pulseLEDs();
 	
 	ESP_Init();
 	
 	EnableInterrupts();
+}
+
+void pulseLEDs(void)
+{
+	int i;
+	delay_ms(100);
+	for(i = 0; i < 2; i++)
+	{
+		GPIO_PORTF_DATA_R &= ~0x0E; // Turn off LEDs
+		GPIO_PORTF_DATA_R |=  0x02; // RED
+		delay_ms(20);
+		GPIO_PORTF_DATA_R &= ~0x0E; // Turn off LEDs
+		GPIO_PORTF_DATA_R |=  0x04; // BLUE
+		delay_ms(20);
+		GPIO_PORTF_DATA_R &= ~0x0E; // Turn off LEDs
+		GPIO_PORTF_DATA_R |=  0x08; // GREEN
+		delay_ms(20);
+		GPIO_PORTF_DATA_R &= ~0x0E; // Turn off LEDs
+		delay_ms(50);
+	}
 }
 
 // Configure PF1-PF3 as GPIO Output
@@ -114,18 +143,32 @@ void PortF_Init(void)
   GPIO_PORTF_PUR_R   &= ~0x0E;       // Enable weak pull-up on PF1-PF3
 }
 
-// PD7 GPIO Output
+// PB2-PB7 GPIO Output
+void PortB_Init(void)
+{
+  unsigned long volatile delay;
+  SYSCTL_RCGC2_R |= 0x00000002;     // activate clock for port B
+  delay = SYSCTL_RCGC2_R;
+  GPIO_PORTB_AMSEL_R &= ~0xFC;       // disable analog functionality on PB2-PB7
+  GPIO_PORTB_PCTL_R  &= ~0xFFFFFF00; // configure PB2-PB7 as GPIO
+  GPIO_PORTB_DIR_R   |=  0xFC;       // make PB2-PB7 output
+  GPIO_PORTB_AFSEL_R &= ~0xFC;       // disable alt funct on PB2-PB7
+  GPIO_PORTB_DEN_R   |=  0xFC;       // enable digital I/O on PB2-PB7
+	GPIO_PORTB_DATA_R  &= ~0xFC;       // Set to zero
+}
+
+// PD0, PD1 GPIO Output
 void PortD_Init(void)
 {
   unsigned long volatile delay;
   SYSCTL_RCGC2_R |= 0x00000008;     // activate clock for port D
   delay = SYSCTL_RCGC2_R;
-  GPIO_PORTD_AMSEL_R &= ~0x80;       // disable analog functionality on PD7
-  GPIO_PORTD_PCTL_R  &= ~0xF0000000; // configure PD7 as GPIO
-  GPIO_PORTD_DIR_R   |= ~0x80;       // make PD74 input
-  // GPIO_PORTD_DR8R_R  |=  0x80;       // enable 8 mA drive on PD7
-  GPIO_PORTD_AFSEL_R &= ~0x80;       // disable alt funct on PD7
-  GPIO_PORTD_DEN_R   |=  0x80;       // enable digital I/O on PD7
+  GPIO_PORTD_AMSEL_R &= ~0x03;       // disable analog functionality on PB2-PB7
+  GPIO_PORTD_PCTL_R  &= ~0x000000FF; // configure PB2-PB7 as GPIO
+  GPIO_PORTD_DIR_R   |=  0x03;       // make PB2-PB7 output
+  GPIO_PORTD_AFSEL_R &= ~0x03;       // disable alt funct on PB2-PB7
+  GPIO_PORTD_DEN_R   |=  0x03;       // enable digital I/O on PB2-PB7
+	GPIO_PORTD_DATA_R  &= ~0x03;       // Set to zero
 }
 
 // Reset ESP8266, verify connection to network
@@ -134,10 +177,6 @@ void ESP_Init(void)
 	unsigned char in;
 	in = ' ';
 	
-	// TODO: Attatch this to mosfet so it resets properly
-	// GPIO_PORTD_DATA_R &= ~0x80; // Assert ESP8266 Reset
-	// GPIO_PORTD_DATA_R |=  0x80; // Deassert ESP8266 Reset
-	
 	UART0_SendString("Reset ESP8266");
 	UART0_CRLF();
 	
@@ -145,7 +184,7 @@ void ESP_Init(void)
 	
 	while(in != 'b')
 	{
-		delay_ms(500); // Every half second try the handshake
+		delay_ms(100); // Every half second try the handshake
 		UART1_SendChar('a');
 		UART0_SendChar('a');
 		
@@ -200,8 +239,8 @@ void ESP_Init(void)
 }
 
 // 80Mhz = 12.5ns period
-// 1ms = 80xperiod
-// 80 periods/3periodsperloop = 27 per ms
+// 1us = 80xperiod
+// 80 periods/3periodsperloop = 27 per uss
 void delay_ms(int t)
 {
 	int ulCount;
@@ -212,7 +251,7 @@ void delay_ms(int t)
 	for(j = 0; j < t; j++)
 	{	
 		// 1ms
-		for(i = 0; i <  998; i++)
+		for(i = 0; i <  900; i++)
 		{
 			// Delay 1us //
 			ulCount = 26;
