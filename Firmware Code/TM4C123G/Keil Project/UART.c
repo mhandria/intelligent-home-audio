@@ -27,7 +27,7 @@ void UART0_Init(void)
 }
 
 // Initialize UART1 (Port B)
-// UART with 2,764,800 baud rate (assuming 80 MHz UART clock),
+// UART with x baud rate (assuming 80 MHz UART clock),
 // 8 bit word length, no parity bits, one stop bit, FIFOs enabled
 // Used for serial terminal debug
 void UART1_Init(void)

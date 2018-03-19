@@ -1,9 +1,8 @@
 #include <ESP8266WiFi.h>
 #include <WiFiClient.h>
-#include <WiFiUdp.h>
-#include "ESP8266Ping\src\ESP8266Ping.h"
+#include <WiFiUDP.h>
 #include <EEPROM.h>
-#include <Ticker.h>
+#include "ESP8266Ping\src\ESP8266Ping.h"
 
 // yield()          - lets the processor run background tasks (networking)
 // ESP.wdtDisable() - disables only the software watchdog timer
@@ -13,8 +12,8 @@
 const char* ssid     = "wigglewiggle";
 const char* password = "I|\\|s+@|\\|+_R@m3|\\|_|\\|00d13s";
 const int CHUNK_SIZE = 2048;
-const int BAUD_RATE = 1658880;
-// const int BAUD_RATE = 115200; // use for terminal debug in place of MCU communication
+// const int BAUD_RATE = 1658880;
+const int BAUD_RATE = 115200; // use for terminal debug in place of MCU communication
 
 // Set these three constants to speed up testing //
 const bool manualConnect = true;
@@ -24,8 +23,8 @@ const IPAddress IHA_SERVER(192,168,1,103);
 // Global Variables //
 bool debug_enable;
 WiFiClient client;
+WiFiUDP client_udp;
 IPAddress IHA_Server;
-Ticker sampleTick;
 byte sampleArray0 [CHUNK_SIZE];
 // byte sampleArray1 [CHUNK_SIZE];
 int sampleIndex;
@@ -33,9 +32,9 @@ int chunkLength;
 
 // Runs after reset //
 void setup()
-{
+{  
   sampleIndex = 0;
-  ESP.wdtDisable(); // disable the watch dog timer simply because I am a bad programmer
+  ESP.wdtDisable(); // disable the software watch dog timer because I am a bad programmer
   UART_init();
   wifi_init();
   client_init();
@@ -100,18 +99,22 @@ void wifi_init()
   // Connect to the Wi-Fi network
   debugLine("Connecting to:  " + String(ssid));
   debugLine("Using password: " + String(password));
-  
+  ESP.wdtFeed();
   WiFi.begin(ssid, password);
   
   while (WiFi.status() != WL_CONNECTED)
   { // Wait for the Wi-Fi to connect
+    ESP.wdtFeed();
     delay(1000);
     debugStr(".");
+    ESP.wdtFeed();
   }
   
+  ESP.wdtFeed();
   Serial.print("Y");
   debugLine(" ");
-  debugLine("Connected!");
+  debugStr("Connected to WiFi using address: ");
+  debugLine(WiFi.localIP().toString());
 }
 
 void client_init()
@@ -183,7 +186,7 @@ void client_init()
     {
       ESP.wdtFeed();
       client.write("?");
-      delay(100);
+      delay(300);
       if(client.available() > 0)
       {
         in = client.read();
@@ -192,6 +195,10 @@ void client_init()
   }
   debugLine("Connected!");
   Serial.print("Y");
+
+  // Setup UDP listening
+  client_udp.begin(14124);
+  debugLine("Began UDP on port 14124");
 }
 
 //                          //
@@ -433,20 +440,40 @@ unsigned char getServerChar()
 void getSong()
 {  
   while(true)
-  {
+  { // TODO: MAKE THIS RETURN
     ESP.wdtFeed();
-    client.flush();
 
+    debugLine("Waiting for 's'");
     while(getMCUChar() != 's');
     
     client.write("s"); // Prompt for song data
     
     // wait for the chunk
-    while(client.available() < 1)
+    debugLine("Waiting for chunk");
+    chunkLength = 0;
+    while(chunkLength == 0)
     {
+      chunkLength = client_udp.parsePacket();
       ESP.wdtFeed();
     }
+    debugStr("Chunk Length: ");
+    debugLine(String(chunkLength));
+    client_udp.read(sampleArray0, CHUNK_SIZE);
+    sendChunk();
+
+    /*
+     * Alternative UDP reception
+    int i = 0;
+    while(udp.available() > 0 && i < CHUNK_SIZE)
+    {
+      ESP.wdtFeed();
+      sampleArray0[i] = client.read();
+      i++;
+    }
+    */
     
+    /*
+     * OLD TCP CODE
     int i = 0;
     while(client.available() > 0 && i < CHUNK_SIZE)
     {
@@ -458,7 +485,9 @@ void getSong()
     ESP.wdtFeed();
     chunkLength = i;
     sendChunk();
+    */
   }
+  
 }
 
 // sends a single 16-bit sample to the TM4C123 to be immediately "played"

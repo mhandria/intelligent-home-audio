@@ -12,6 +12,8 @@ import os
 SONG_CHUNK_SIZE = 2048
 SPKN = 0
 CLIENT = 0
+UDP_CLIENT = 0
+ADDR = 0
 
 # global variables
 songFileIndex = 44 #this might be off by one
@@ -27,8 +29,9 @@ def sendSongChunk():
     global isSendingSong
     global songToSend
     global SPKN
-    global CLIENT
+    global UDP_CLIENT
     global songFileIndex
+    global ADDR
 
     while(sharedMem.isSendingSong == False): #hang until a song needs to be sent
         songFileIndex = 44 # reset the index for the next song file
@@ -76,14 +79,18 @@ def sendSongChunk():
         songChunk = songFile.read(songChunkSize)
 
         # send the chunk
-        CLIENT.send(songChunk)
+        # TODO: test this with just a normal string instead of 2k
+        print('Sending Chunk to UDP Addr: {0}'.format((ADDR[0],14124)))
+        # UDP_CLIENT.sendto(songChunk, (ADDR[0],14124))
+        sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        sock.sendto(songChunk,(ADDR[0], 14124))
 
         # update the index to point to the next chunk
         songFileIndex = songFileIndex + SONG_CHUNK_SIZE
 
         print('Speaker - Client #{0} Sent Song Chunk #{1}'.format(SPKN,round((songFileIndex/SONG_CHUNK_SIZE - 1))))
     except Exception as e:
-        print('Speaker - Client #{0} ERROR: Sending Song Chunk #{1}'.format(SPKN,round((songFileIndex/SONG_CHUNK_SIZE - 1))))
+        print('Speaker - Client #{0} ERROR: Sending Song Chunk #{1}'.format(SPKN,round((songFileIndex/SONG_CHUNK_SIZE))))
         print(e)
         payload = 'na'
         CLIENT.send(payload.encode('utf-8'))
@@ -91,22 +98,22 @@ def sendSongChunk():
     #endexcept
 #end sendSongChunk
 
-def Speaker_Client(client, speaker_number, addr, BUFFER_SIZE):
+def Speaker_Client(client, udp_client, speaker_number, addr):
     print('')
     print("Speaker - Client #{0} connected from {1}...".format(speaker_number,addr))
 
     # initialize variables for this file
     global SPKN
     global CLIENT
+    global UDP_CLIENT
     global songFileIndex
+    global ADDR
 
+    ADDR = addr
     CLIENT = client
+    UDP_CLIENT = udp_client
     SPKN = speaker_number
     songFileIndex = 44 #this might be off by one
-
-    # create UDP socket for this server
-    
-    
 
     #enter loop for handling client
     try:

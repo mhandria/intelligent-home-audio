@@ -25,7 +25,7 @@ while True:
     client_sock.send(payload.encode('utf-8'))
     data = client_sock.recv(BUFSIZ)
 
-    if(payload == 'songData'):
+    if(payload == 's'):
         # log to file because it's a lot of data
         f = open('songData.bin', 'wb+')
         while True:

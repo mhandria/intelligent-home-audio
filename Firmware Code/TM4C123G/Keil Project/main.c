@@ -42,6 +42,7 @@ void pulseLEDs(void);   // Flashy sequence to show the board reset
 void delay_ms(int t);
 void writeBuff(unsigned char in);
 unsigned char readBuff(void);
+unsigned int getPtrDifference(void);
 void writeDAC(unsigned char out);
 void SysTick_Init(void);           // Executes SysTick_Handler ever x periods
 void SysTick_Handler(void);        // Sends a sample to the the DAC
@@ -60,7 +61,7 @@ unsigned char *sampleReadPtr;
 unsigned char *sampleWritePtr;
 bool arePtrsMisaligned;
 
-unsigned int counter;
+unsigned int ticksSinceLastRequest;
 
 // Function Implementation Section //
 
@@ -77,7 +78,6 @@ int main(void)
 		while((UART1_FR_R&UART_FR_RXFE) == 0)
 		{ // when a sample comes, store it in the buffer
 			writeBuff((unsigned char)(UART1_DR_R&0xFF));
-			counter++;
 		}
 		
 		/*
@@ -102,8 +102,9 @@ void init(void)
 {
 	sampleReadPtr  = &sampleBuffer[0];
 	sampleWritePtr = &sampleBuffer[0];
+	ticksSinceLastRequest = 0;
 	arePtrsMisaligned = false;
-	counter = 0;
+	ticksSinceLastRequest = 0;
 	
 	DisableInterrupts();
 	PLL_Init();     // 80Mhz clock
@@ -262,7 +263,7 @@ void SysTick_Init(void)
 	// 44,100Hz = 22.67574us period
 	// 80,000,000 = 0.0125us period
 	// 22.675 / 0.0125 = 1814 clk ticks
-
+  
 	UART0_SendString("Using sample rate of: ");
 	UART0_SendUDec(SAMPLE_FREQ);
 	UART0_CRLF();
@@ -281,9 +282,16 @@ void SysTick_Init(void)
 // Interrupt service routine
 // TODO: Consider only settings flags/variables here and do everything else in the main loop
 //       to prevent long interrupts
+unsigned int ticksSinceLastRequest;
 void SysTick_Handler(void)
 {
+	ticksSinceLastRequest++;
 	writeDAC(readBuff()); // Update the DAC to match the current sample
+	if(getPtrDifference() < 20000 && ticksSinceLastRequest > 1500)
+	{ // If we're running low on samples, request some more
+		UART1_SendChar('s');
+		ticksSinceLastRequest = 0;
+	}
 }
 
 void writeBuff(unsigned char in)
@@ -319,7 +327,6 @@ unsigned char readBuff(void)
 	if(sampleWritePtr == sampleReadPtr && !arePtrsMisaligned)
 	{ // if the read pointer caught up to the write pointer, 
 		// then play silence
-		UART1_SendChar('s');
 	}
 	else
 	{ // otherwise read the buffer and update the pointer
@@ -341,14 +348,30 @@ unsigned char readBuff(void)
 	return out;
 }
 
+unsigned int getPtrDifference(void)
+{
+	if(arePtrsMisaligned)
+	{
+		return ((BUFFER_SIZE - (sampleReadPtr - &sampleBuffer[0])) + (sampleWritePtr - &sampleBuffer[0]));
+	}
+	else
+	{ // Otherwise it's simple the difference
+		return (sampleWritePtr - sampleReadPtr);
+	}
+}
+
 void writeDAC(unsigned char out)
 {
+	out = out + 127;
+	/*
 	GPIO_PORTB_DATA_R &= ~0xFC;
 	GPIO_PORTB_DATA_R |= out&0xFC;
 	GPIO_PORTD_DATA_R &= ~0x03;
 	GPIO_PORTD_DATA_R |= out&0x03;
+	*/
+	GPIO_PORTB_DATA_R = out;
+	GPIO_PORTD_DATA_R = out;
 }
-
 
 // 80Mhz = 12.5ns period
 // 1us = 80xperiod

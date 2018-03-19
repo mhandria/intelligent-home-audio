@@ -32,14 +32,12 @@ HOST        = '192.168.1.103' #uncomment for Blake's Desktop on his home network
 # HOST        = '192.168.1.17'  #uncomment for Blake's Laptop on mobile hotspot
 # HOST        = '192.168.1.131' #uncoment for Michael's Laptop.
 
-
 PHONE_PORT  = 14123
 MCU_PORT    = 14124
 BUFFER_SIZE = 1024
 PHONE_ADDR  = (HOST,PHONE_PORT)
 MCU_ADDR    = (HOST,MCU_PORT)
 #endConstants
-#TODO: Replace with socket.
 
 sharedMem.init()
 
@@ -51,26 +49,21 @@ phoneThread.start()
 
 time.sleep(1)
 
-#speakerThread = Thread(target=Speaker_Client, args=(0, MCU_ADDR, BUFFER_SIZE))
-#speakerThread.start()
-#endMain
+s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)  # Create a socket object
 
-#experimental
-s = socket.socket()         # Create a socket object
-host = socket.gethostname() # Get local machine name
+s.bind(MCU_ADDR)        # Bind to the port
+s.listen(5)             # Now wait for client connection
 
 print(' ')
 print('Server is listening for speaker clients...')
 
-s.bind(MCU_ADDR)        # Bind to the port
-s.listen(5)             # Now wait for client connection.
-
 speakerNumber = 0
 while True:
    client, addr = s.accept()     # Establish connection with client.
-   t = Thread(target=Speaker_Client, args=(client, speakerNumber, addr, BUFFER_SIZE))
+   UDP_sock = 0
+   t = Thread(target=Speaker_Client, args=(client, UDP_sock, speakerNumber, addr))
    t.start()
-
+   
    speakerNumber = speakerNumber + 1
 #endwhile
 s.close()
