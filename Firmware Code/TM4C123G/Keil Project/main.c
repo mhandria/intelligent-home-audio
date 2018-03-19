@@ -50,7 +50,7 @@ void SysTick_Handler(void);        // Sends a sample to the the DAC
 // Constants Section //
 const unsigned long BUFFER_SIZE = 30000;
 const double SAMPLE_FREQ = 44100;
-const unsigned long CHUNK_SIZE = 2048;
+const unsigned long CHUNK_SIZE = 512;
 
 // Global Variables Section //
 
@@ -287,7 +287,7 @@ void SysTick_Handler(void)
 {
 	ticksSinceLastRequest++;
 	writeDAC(readBuff()); // Update the DAC to match the current sample
-	if(getPtrDifference() < 20000 && ticksSinceLastRequest > 1500)
+	if(getPtrDifference() < 20000 && ticksSinceLastRequest > 100)
 	{ // If we're running low on samples, request some more
 		UART1_SendChar('s');
 		ticksSinceLastRequest = 0;

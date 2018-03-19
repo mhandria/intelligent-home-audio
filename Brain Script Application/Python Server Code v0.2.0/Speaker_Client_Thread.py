@@ -9,7 +9,7 @@ import sharedMem
 import os
 
 # constants
-SONG_CHUNK_SIZE = 2048
+SONG_CHUNK_SIZE = 512
 SPKN = 0
 CLIENT = 0
 UDP_CLIENT = 0
@@ -79,9 +79,8 @@ def sendSongChunk():
         songChunk = songFile.read(songChunkSize)
 
         # send the chunk
-        # TODO: test this with just a normal string instead of 2k
-        print('Sending Chunk to UDP Addr: {0}'.format((ADDR[0],14124)))
-        # UDP_CLIENT.sendto(songChunk, (ADDR[0],14124))
+        # print('Sending Chunk to UDP Addr: {0}'.format((ADDR[0],14124)))
+
         sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         sock.sendto(songChunk,(ADDR[0], 14124))
 

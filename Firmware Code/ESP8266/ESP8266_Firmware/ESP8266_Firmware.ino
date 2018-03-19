@@ -11,9 +11,9 @@
 // Constants //
 const char* ssid     = "wigglewiggle";
 const char* password = "I|\\|s+@|\\|+_R@m3|\\|_|\\|00d13s";
-const int CHUNK_SIZE = 2048;
-// const int BAUD_RATE = 1658880;
-const int BAUD_RATE = 115200; // use for terminal debug in place of MCU communication
+const int CHUNK_SIZE = 512; // TODO: See about overriding this limitation in WiFiUDP.h
+const int BAUD_RATE = 1658880;
+// const int BAUD_RATE = 115200; // use for terminal debug in place of MCU communication
 
 // Set these three constants to speed up testing //
 const bool manualConnect = true;
@@ -449,28 +449,20 @@ void getSong()
     client.write("s"); // Prompt for song data
     
     // wait for the chunk
-    debugLine("Waiting for chunk");
+    // debugLine("Waiting for chunk");
     chunkLength = 0;
     while(chunkLength == 0)
     {
       chunkLength = client_udp.parsePacket();
       ESP.wdtFeed();
+      yield();
     }
-    debugStr("Chunk Length: ");
-    debugLine(String(chunkLength));
+    // debugStr("Chunk Length: ");
+    // debugLine(String(chunkLength));
     client_udp.read(sampleArray0, CHUNK_SIZE);
+    yield();
+    ESP.wdtFeed();
     sendChunk();
-
-    /*
-     * Alternative UDP reception
-    int i = 0;
-    while(udp.available() > 0 && i < CHUNK_SIZE)
-    {
-      ESP.wdtFeed();
-      sampleArray0[i] = client.read();
-      i++;
-    }
-    */
     
     /*
      * OLD TCP CODE
@@ -497,6 +489,7 @@ void sendChunk()
   {
     Serial.write(sampleArray0[i]);
     ESP.wdtFeed();
+    yield();
   }
 }
 
