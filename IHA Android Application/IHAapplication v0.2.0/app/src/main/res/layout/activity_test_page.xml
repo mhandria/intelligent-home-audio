@@ -4,31 +4,27 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    tools:context="handria.com.iha_application.SignUp">
+    tools:context="handria.com.iha_application.TestPage">
+
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:orientation="vertical"
-        android:gravity="center">
-
-        <TextView
-            android:layout_width="wrap_content"
+        android:orientation="vertical">
+        <EditText
+            android:id="@+id/commandString"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:textColor="@color/colorPrimary"
-            android:textSize="30dp"
-            android:text="Sorry,\nThis Content Is Not Ready"
-            android:layout_gravity="center"
-            android:fontFamily="@font/pc"/>
-
+            android:layout_marginTop="200dp"
+            android:padding="5dp"
+            android:background="@drawable/container_rounded"/>
         <Button
-            android:id="@+id/back_button"
+            android:onClick="sendData"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="\t\t\t\t\t\tBack\t\t\t\t\t\t"
-            android:background="@drawable/button"
-            android:layout_marginTop="50dp"
-            android:onClick="goBack"/>
-
+            android:layout_gravity="center"
+            android:layout_marginTop="30dp"
+            android:text="send"
+            android:background="@drawable/button"/>
     </LinearLayout>
 
 </android.support.constraint.ConstraintLayout>
