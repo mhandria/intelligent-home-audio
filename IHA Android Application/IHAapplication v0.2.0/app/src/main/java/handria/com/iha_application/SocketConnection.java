@@ -40,6 +40,7 @@ public class SocketConnection extends AsyncTask<String, Void, String[]> {
     private onComplete then;
     WeakReference<Context> _mContextRef;
     private String fileName;
+    private Socket _socket;
 
     SocketConnection(onComplete then, Context _context){
         this.then = then;
@@ -61,7 +62,6 @@ public class SocketConnection extends AsyncTask<String, Void, String[]> {
                 saveIp(hostNames[0], hostNames[1]);
             }
 
-            Socket _socket;
             try {
                 if(hostNames[1].equals("Invalid Command")){
                     _socket = new Socket(hostNames[0], port);
@@ -88,12 +88,7 @@ public class SocketConnection extends AsyncTask<String, Void, String[]> {
             PrintWriter out = new PrintWriter(_socket.getOutputStream(), true);
 
             out.println(msg);
-            while(!buffRead.ready()){
-                if(_socket.isClosed()){
-                    throw new Exception("Socket Fucked Up");
-                }
-               SocketChannel ch =  _socket.getChannel();
-            }
+            while(!buffRead.ready());
             String response = buffRead.readLine();
             _socket.close();
             info[2] = response;
@@ -112,6 +107,17 @@ public class SocketConnection extends AsyncTask<String, Void, String[]> {
             info[2] = "failed";
         }
         return info;
+    }
+
+    @Override
+    protected void onCancelled() {
+        super.onCancelled();
+        try {
+            if (_socket != null)
+                _socket.close();
+        }catch(Exception e){
+            Log.d("Cancel AsyncTask", "tried closing any sockets out there but exception thrown");
+        }
     }
 
     /**
@@ -184,8 +190,8 @@ public class SocketConnection extends AsyncTask<String, Void, String[]> {
     }
 
     private String[] findIp(int port){
-        String hostName = "";
-        String externalHostName = "";
+        String hostName = "INVALID";
+        String externalHostName = "INVALID";
         try {
             Context _context = _mContextRef.get();
             WifiManager wm = (WifiManager) _context.getApplicationContext().getSystemService(WIFI_SERVICE);
