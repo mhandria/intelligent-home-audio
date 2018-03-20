@@ -50,7 +50,6 @@ void SysTick_Handler(void);        // Sends a sample to the the DAC
 // Constants Section //
 const unsigned long BUFFER_SIZE = 30000;
 const double SAMPLE_FREQ = 44100;
-const unsigned long CHUNK_SIZE = 512;
 
 // Global Variables Section //
 
@@ -75,7 +74,12 @@ int main(void)
 	UART0_CRLF();
 	while(1)
 	{
-		while((UART1_FR_R&UART_FR_RXFE) == 0)
+		
+		// TODO: capture the char and check for special characters,
+		// This wil require checking for accidental special chars in the ESP8266 and
+		// changing them so that they do not tirgger special actions
+		
+		while((UART1_FR_R&UART_FR_RXFE) == 0) 
 		{ // when a sample comes, store it in the buffer
 			writeBuff((unsigned char)(UART1_DR_R&0xFF));
 		}
@@ -280,14 +284,12 @@ void SysTick_Init(void)
 }
 
 // Interrupt service routine
-// TODO: Consider only settings flags/variables here and do everything else in the main loop
-//       to prevent long interrupts
 unsigned int ticksSinceLastRequest;
 void SysTick_Handler(void)
 {
 	ticksSinceLastRequest++;
 	writeDAC(readBuff()); // Update the DAC to match the current sample
-	if(getPtrDifference() < 20000 && ticksSinceLastRequest > 100)
+	if(getPtrDifference() < 20000 && ticksSinceLastRequest > 1200)
 	{ // If we're running low on samples, request some more
 		UART1_SendChar('s');
 		ticksSinceLastRequest = 0;
@@ -300,8 +302,8 @@ void writeBuff(unsigned char in)
 	if(sampleWritePtr == sampleReadPtr && arePtrsMisaligned)
 	{ // if the write pointer caught up to the read pointer, 
 		// then drop the sample
-		UART0_SendString("Samples came in too fast");
-		UART0_CRLF();
+		// UART0_SendString("Samples came in too fast");
+		// UART0_CRLF();
 	}
 	else
 	{ // otherwise write to the buffer and update the pointer
@@ -320,6 +322,7 @@ void writeBuff(unsigned char in)
 	}
 }
 
+bool songPlaying = false;
 unsigned char readBuff(void)
 {
 	unsigned char out = 127;
@@ -327,10 +330,18 @@ unsigned char readBuff(void)
 	if(sampleWritePtr == sampleReadPtr && !arePtrsMisaligned)
 	{ // if the read pointer caught up to the write pointer, 
 		// then play silence
+		/*
+		if(songPlaying)
+		{
+			UART0_SendString("Samples came in too slow");
+			UART0_CRLF();
+		}
+		*/
 	}
 	else
 	{ // otherwise read the buffer and update the pointer
-	
+			// songPlaying = true;
+		
 			out = *sampleReadPtr;
 			
 			if(sampleReadPtr - &sampleBuffer[0] < BUFFER_SIZE-1)
@@ -361,7 +372,7 @@ unsigned int getPtrDifference(void)
 }
 
 void writeDAC(unsigned char out)
-{
+{ // TODO: test all values of this with a multimeter
 	out = out + 127;
 	/*
 	GPIO_PORTB_DATA_R &= ~0xFC;

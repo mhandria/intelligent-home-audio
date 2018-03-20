@@ -11,9 +11,9 @@
 // Constants //
 const char* ssid     = "wigglewiggle";
 const char* password = "I|\\|s+@|\\|+_R@m3|\\|_|\\|00d13s";
-const int CHUNK_SIZE = 512; // TODO: See about overriding this limitation in WiFiUDP.h
-const int BAUD_RATE = 1658880;
-// const int BAUD_RATE = 115200; // use for terminal debug in place of MCU communication
+const unsigned int BAUD_RATE = 1658880;
+// const unsigned int BAUD_RATE = 115200; // use for terminal debug in place of MCU communication
+const unsigned int MAX_CHUNK_SIZE = 4096; // The largest UDP packet we have buffer space for
 
 // Set these three constants to speed up testing //
 const bool manualConnect = true;
@@ -25,16 +25,22 @@ bool debug_enable;
 WiFiClient client;
 WiFiUDP client_udp;
 IPAddress IHA_Server;
-byte sampleArray0 [CHUNK_SIZE];
-// byte sampleArray1 [CHUNK_SIZE];
 int sampleIndex;
 int chunkLength;
+uint8_t buff[MAX_CHUNK_SIZE];
+unsigned char input_char;
+unsigned int ticksSinceLastRequest;
 
 // Runs after reset //
 void setup()
-{  
-  sampleIndex = 0;
+{
   ESP.wdtDisable(); // disable the software watch dog timer because I am a bad programmer
+
+  // Initialize global variables
+  sampleIndex = 0;
+  ticksSinceLastRequest = 0;
+
+  // Initialize communications
   UART_init();
   wifi_init();
   client_init();
@@ -43,11 +49,23 @@ void setup()
 // Main program loop, runs after setup //
 void loop()
 {
-  unsigned char in;
   ESP.wdtFeed();
+
+  if(Serial.available() > 1 && ticksSinceLastRequest > 1000)
+  {
+   input_char = Serial.read();
+   Serial.flush(); // only read the first char, this prevents overflow
+   getSongChunk(); 
+  }
+  else
+  {
+    if(ticksSinceLastRequest < 1001)
+    { // don't count forever to prevent overflow
+      ticksSinceLastRequest++;
+    }
+  }
   
-  getSong(); // TODO: make this return
-  
+  /*
   if(!client.connected())
   {
     debugLine("The connection with the server has been lost. Reconnecting...");
@@ -57,7 +75,7 @@ void loop()
     debugLine("The connection with the server has been restored");
     Serial.write('y');
   }
-  
+  */
   // TODO: Check if Wi-Fi disconnected, if so, reconnect and update MCU LED
 }
 
@@ -111,7 +129,7 @@ void wifi_init()
   }
   
   ESP.wdtFeed();
-  Serial.print("Y");
+  Serial.print("Y");  // TODO: make this blocking without an acknowledgement
   debugLine(" ");
   debugStr("Connected to WiFi using address: ");
   debugLine(WiFi.localIP().toString());
@@ -186,14 +204,20 @@ void client_init()
     {
       ESP.wdtFeed();
       client.write("?");
-      delay(300);
+      delay(800);
       if(client.available() > 0)
       {
         in = client.read();
       }
     }
   }
+  
+  delay(100);
   debugLine("Connected!");
+  Serial.print("Y"); // TODO: make this blocking without an acknowledgement
+  delay(100);
+  Serial.print("Y");
+  delay(100);
   Serial.print("Y");
 
   // Setup UDP listening
@@ -437,60 +461,39 @@ unsigned char getServerChar()
 }
 
 // gets a song chunk from the server
-void getSong()
-{  
-  while(true)
-  { // TODO: MAKE THIS RETURN
-    ESP.wdtFeed();
+void getSongChunk()
+{
+  ESP.wdtFeed();
+  UDP_write('s');
+  delay(4);
 
-    debugLine("Waiting for 's'");
-    while(getMCUChar() != 's');
-    
-    client.write("s"); // Prompt for song data
-    
-    // wait for the chunk
-    // debugLine("Waiting for chunk");
-    chunkLength = 0;
-    while(chunkLength == 0)
+  // Parse the packet
+  chunkLength = client_udp.parsePacket();
+
+  // If the packet exists, then read it's contents and forward it to the MCU via serial
+  // otherwise return to the main loop
+  if(chunkLength)
+  {
+    ESP.wdtFeed();
+    // Read the chunk
+    uint8_t *ptr = &buff[0];
+    client_udp.read(ptr, chunkLength);
+
+    // Send the chunk
+    for(int i = 0; i < chunkLength; i++)
     {
-      chunkLength = client_udp.parsePacket();
       ESP.wdtFeed();
-      yield();
+      Serial.write(*ptr);
+      ptr++;
     }
-    // debugStr("Chunk Length: ");
-    // debugLine(String(chunkLength));
-    client_udp.read(sampleArray0, CHUNK_SIZE);
-    yield();
-    ESP.wdtFeed();
-    sendChunk();
-    
-    /*
-     * OLD TCP CODE
-    int i = 0;
-    while(client.available() > 0 && i < CHUNK_SIZE)
-    {
-      ESP.wdtFeed();
-      sampleArray0[i] = client.read();
-      i++;
-    } 
-    
-    ESP.wdtFeed();
-    chunkLength = i;
-    sendChunk();
-    */
   }
-  
 }
 
-// sends a single 16-bit sample to the TM4C123 to be immediately "played"
-void sendChunk()
+void UDP_write(unsigned char c)
 {
-  for(int i = 0; i < chunkLength; i++)
-  {
-    Serial.write(sampleArray0[i]);
-    ESP.wdtFeed();
-    yield();
-  }
+  client_udp.beginPacket(IHA_Server, 14124);
+  client_udp.write(c);
+  client_udp.endPacket();
 }
 
 //                          //

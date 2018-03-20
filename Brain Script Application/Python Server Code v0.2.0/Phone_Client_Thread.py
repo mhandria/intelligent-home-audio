@@ -7,6 +7,8 @@ import sharedMem
 import requests
 import os
 
+BUFFER_SIZE = 256
+
 # Functions #
 def getExtIP():
     try:
@@ -23,6 +25,9 @@ def playSong(fileName):
     global songToSend
 
     # TODO: make this code less redundant
+    # TODO: if the file already exists in temp, don't make another
+    # TODO: if the number of files or filesize of /temp/ passes a 
+    #       threshold, then start deleting files as you make more
     try:
         if(os.name == 'nt'): #if testing the server on windows
             # check if the file exists
@@ -54,7 +59,6 @@ def playSong(fileName):
 
                 # return sucessful message and continue listening for phone commands
                 returnPayload = 'Playing: ' + fileName
-                returnPayload = 'Playing: ' + fileName
             else: #if the file name doesn't exist
                 returnPayload = 'ERROR: File "' + fileName + '" does not exist'
         #endelse
@@ -62,6 +66,13 @@ def playSong(fileName):
         print('Phone - ERROR: Failed to play "' + fileName + '"')
         returnPayload = "ERROR: Playing " + fileName
     #end except
+
+    # TODO: start a thread here called "songSync" which periodically takes the average sampleIndex
+    # of all of the speakers and re-assigns all sampleIndexes to that average.
+    # The sample indexes will have to be stored in a sharedMem dictionary
+    #
+    # the thread ends when sharedMem.isSendingSong == false
+
     return returnPayload
 #end playSong
 
@@ -75,7 +86,7 @@ def stopSong():
 #end stopSong
 
 # Main #
-def Phone_Client(ADDR, BUFFER_SIZE):
+def Phone_Client(ADDR):
     global LED0
     global LED1
 

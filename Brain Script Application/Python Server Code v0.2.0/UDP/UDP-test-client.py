@@ -7,10 +7,6 @@ addr = input('IP Address: ')
 sock = socket(AF_INET,SOCK_DGRAM)
 
 while(True):
-    payload = input("Client: ")
-    
+    payload = input("Data: ")
     sock.sendto(payload.encode(),(addr, PORT))
-    data, addr = sock.recvfrom(MAX_SIZE)
-
-    print("Server: {0}".format(data.decode()))
 #endwhile
