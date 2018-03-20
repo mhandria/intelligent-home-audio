@@ -16,6 +16,9 @@ import java.net.Socket;
 public class SocketConnection extends AsyncTask<String, Void, String> {
 
     private onComplete then;
+    WeakReference<Context> _mContextRef;
+    private String fileName;
+    private Socket _socket;
 
     SocketConnection(onComplete then){
         this.then = then;
@@ -24,10 +27,38 @@ public class SocketConnection extends AsyncTask<String, Void, String> {
     @Override
     protected String doInBackground(String... params){
         try {
-            String host = params[0];
-            int port = Integer.parseInt(params[1]);
-            String msg = params[2];
-            Socket _socket = new Socket(host, port);
+            int port = Integer.parseInt(params[0]);
+            String msg = params[1];
+            String[] hostNames = extractIp();
+
+
+            if(hostNames[1].equals("INVALID") && hostNames[0].equals("INVALID")){
+                hostNames = findIp(port);
+                saveIp(hostNames[0], hostNames[1]);
+            }
+
+            try {
+                if(hostNames[1].equals("Invalid Command")){
+                    _socket = new Socket(hostNames[0], port);
+                }else {
+                    _socket = new Socket(hostNames[1], port);
+                    if(!testExternalHost(_socket)){
+                        _socket = new Socket(hostNames[0], port);
+                    }else{
+                        _socket = new Socket(hostNames[1], port);
+                    }
+                }
+            }catch(Exception e){
+                hostNames = findIp(port);
+                saveIp(hostNames[0], hostNames[1]);
+                _socket = new Socket(hostNames[1], port);
+                if(!testExternalHost(_socket)){
+                    _socket = new Socket(hostNames[0], port);
+                }else{
+                    _socket = new Socket(hostNames[1], port);
+                }
+            }
+            //send the commands to the server here.
             BufferedReader buffRead = new BufferedReader(new InputStreamReader(_socket.getInputStream()));
             PrintWriter out = new PrintWriter(_socket.getOutputStream(), true);
             out.println(msg);
@@ -46,7 +77,132 @@ public class SocketConnection extends AsyncTask<String, Void, String> {
         }catch(Exception e){
 
             Log.e("PARAMETER", "failed to grab param");
-            return "failed";
+            info[2] = "failed";
+        }
+        return info;
+    }
+
+    @Override
+    protected void onCancelled() {
+        super.onCancelled();
+        try {
+            if (_socket != null)
+                _socket.close();
+        }catch(Exception e){
+            Log.d("Cancel AsyncTask", "tried closing any sockets out there but exception thrown");
+        }
+    }
+
+    /**
+     * this function will save the ip and external ip names to
+     * an internal file on the contex's directory.
+     *
+     * @param ip - the ip given to the server being connected to
+     * @param exIp - the router's port 14123 forwarded ip name.
+     */
+    private void saveIp(String ip, String exIp){
+        try{
+            Context _context = _mContextRef.get();
+            FileOutputStream _out = _context.openFileOutput("ip.src", Context.MODE_PRIVATE);
+            byte[] ipData = combineArray(ip.getBytes(), exIp.getBytes());
+            _out.write(ipData);
+            _out.close();
+        }catch(Exception e){
+            Log.e("SAVE IP", e.toString());
+            createNewFile(ip, exIp);
+        }
+    }
+
+    /**
+     * This function will
+     * 1) create a new file to save ip data strings into
+     * 2) save the ip data strings (ip and exIp) to the file.
+     *
+     * @param ip - the ip given to the server being connected to
+     * @param exIp - the router's port 14123 forwarded ip name.
+     */
+    private void createNewFile(String ip, String exIp){
+        try{
+            Context _context = _mContextRef.get();
+            File directory = _context.getFilesDir();
+            File file = new File(directory, "ip.src");
+            file.setWritable(true);
+            FileOutputStream _out = _context.openFileOutput("ip.src", Context.MODE_PRIVATE);
+            byte[] ipData = combineArray(ip.getBytes(), exIp.getBytes());
+            _out.write(ipData);
+            _out.close();
+        }catch(Exception e){
+            Log.e("WRITE FILE", e.toString());
+        }
+    }
+
+
+    private String[] extractIp(){
+        StringBuilder ipName = new StringBuilder();
+        StringBuilder externalIpName = new StringBuilder();
+        try{
+            Context _context = _mContextRef.get();
+            FileInputStream _in = _context.openFileInput("ip.src");
+
+            while(true) {
+                int data = _in.read();
+                if(data != '\n' && data != -1) ipName.append((char) data);
+                else break;
+            }
+            while(true){
+                int data = _in.read();
+                if(data != -1) externalIpName.append((char) data);
+                else break;
+            }
+            String[] names = {ipName.toString(), externalIpName.toString()};
+            return names;
+        }catch(Exception e){
+            String[] names = {"INVALID", "INVALID"};
+            return names;
+        }
+    }
+
+    private String[] findIp(int port){
+        String hostName = "INVALID";
+        String externalHostName = "INVALID";
+        try {
+            Context _context = _mContextRef.get();
+            WifiManager wm = (WifiManager) _context.getApplicationContext().getSystemService(WIFI_SERVICE);
+            String ip = Formatter.formatIpAddress(wm.getConnectionInfo().getIpAddress());
+            String _prefix = ip.substring(0, ip.lastIndexOf('.') + 1);
+
+            for (int i = 0; i < 255; i++) {
+                //when running on an virtual machine device, comment the one below
+                //this and uncomment the other testIp.
+                String testIp = _prefix + String.valueOf(i);
+                //String testIp = "192.168.1."+String.valueOf(i);
+                InetAddress address = InetAddress.getByName(testIp);
+                boolean reachable = address.isReachable(1000);
+                if (reachable) {
+                    try {
+                        Socket _test = new Socket(testIp, port);
+                        hostName = testIp;
+                        externalHostName = getExternalHostName(_test);
+                        _test.close();
+                        break;
+                    } catch (Exception e) {
+                        continue;
+                    }
+                }
+            }
+        }catch(UnknownHostException unknown){
+            Log.e("asyncTask.findIp", unknown.toString());
+        }catch(IOException io){
+            Log.e("asyncTask.findIp", io.toString());
+        }
+        String[] names = {hostName, externalHostName};
+        return names;
+    }
+
+    private byte[] combineArray(byte[] a, byte[] b){
+        byte[] newData = new byte[a.length+b.length+1];
+        for(int i = 0; i < a.length; i++){
+            newData[i] = a[i];
         }
     }
 
