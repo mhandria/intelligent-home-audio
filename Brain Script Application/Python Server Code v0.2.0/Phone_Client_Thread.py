@@ -28,6 +28,7 @@ def playSong(fileName):
     # TODO: if the file already exists in temp, don't make another
     # TODO: if the number of files or filesize of /temp/ passes a 
     #       threshold, then start deleting files as you make more
+    # TODO: append silence to end of song so that it
     try:
         if(os.name == 'nt'): #if testing the server on windows
             # check if the file exists

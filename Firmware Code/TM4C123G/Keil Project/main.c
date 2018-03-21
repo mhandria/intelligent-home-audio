@@ -61,7 +61,7 @@ unsigned char *sampleWritePtr;
 bool arePtrsMisaligned;
 
 unsigned int ticksSinceLastRequest;
-
+  
 // Function Implementation Section //
 
 int main(void)
@@ -72,6 +72,7 @@ int main(void)
 	
 	UART0_SendString("Entering Main Loop");
 	UART0_CRLF();
+	
 	while(1)
 	{
 		
@@ -116,7 +117,7 @@ void init(void)
 	UART1_Init();   // UART1 initialization - PB0 Rx - PB1 Tx
 	PortF_Init();   // Initalize RGB LEDs
 	PortB_Init();
-	PortD_Init();
+	// PortD_Init();
 	
 	UART0_SendString("USB UART Connection OK");
 	UART0_CRLF();
@@ -175,6 +176,7 @@ void PortB_Init(void)
   GPIO_PORTB_AMSEL_R &= ~0xFC;       // disable analog functionality on PB2-PB7
   GPIO_PORTB_PCTL_R  &= ~0xFFFFFF00; // configure PB2-PB7 as GPIO
   GPIO_PORTB_DIR_R   |=  0xFC;       // make PB2-PB7 output
+	GPIO_PORTB_DR8R_R  |=  0xFC;       // enable 8 mA drive on PB2 - PB7
   GPIO_PORTB_AFSEL_R &= ~0xFC;       // disable alt funct on PB2-PB7
   GPIO_PORTB_DEN_R   |=  0xFC;       // enable digital I/O on PB2-PB7
 	GPIO_PORTB_DATA_R  &= ~0xFC;       // Set to zero
@@ -186,11 +188,12 @@ void PortD_Init(void)
   unsigned long volatile delay;
   SYSCTL_RCGC2_R |= 0x00000008;     // activate clock for port D
   delay = SYSCTL_RCGC2_R;
-  GPIO_PORTD_AMSEL_R &= ~0x03;       // disable analog functionality on PB2-PB7
-  GPIO_PORTD_PCTL_R  &= ~0x000000FF; // configure PB2-PB7 as GPIO
-  GPIO_PORTD_DIR_R   |=  0x03;       // make PB2-PB7 output
-  GPIO_PORTD_AFSEL_R &= ~0x03;       // disable alt funct on PB2-PB7
-  GPIO_PORTD_DEN_R   |=  0x03;       // enable digital I/O on PB2-PB7
+  GPIO_PORTD_AMSEL_R &= ~0x03;       // disable analog functionality on PD0-PD1
+  GPIO_PORTD_PCTL_R  &= ~0x000000FF; // configure PD0-PD1 as GPIO
+  GPIO_PORTD_DIR_R   |=  0x03;       // make PD0-PD1 output
+	GPIO_PORTD_DR8R_R  |=  0x03;       // enable 8 mA drive on PD0-PD1
+  GPIO_PORTD_AFSEL_R &= ~0x03;       // disable alt funct on PD0-PD1
+  GPIO_PORTD_DEN_R   |=  0x03;       // enable digital I/O on PD0-PD1
 	GPIO_PORTD_DATA_R  &= ~0x03;       // Set to zero
 }
 
@@ -284,9 +287,40 @@ void SysTick_Init(void)
 }
 
 // Interrupt service routine
+unsigned char value = 0;
+bool decreasing = 0;
 unsigned int ticksSinceLastRequest;
+
 void SysTick_Handler(void)
 {
+	/*
+	writeDAC(value);
+	if(decreasing)
+	{
+		if(value == 0)
+		{
+			decreasing = false;
+			value++;
+		}
+		else
+		{
+			value--;
+		}
+	}
+	else
+	{
+		if(value == 255)
+		{
+			decreasing = true;
+			value--;
+		}
+		else
+		{
+			value++;
+		}
+	}
+	*/
+	
 	ticksSinceLastRequest++;
 	writeDAC(readBuff()); // Update the DAC to match the current sample
 	if(getPtrDifference() < 20000 && ticksSinceLastRequest > 1200)
@@ -373,15 +407,15 @@ unsigned int getPtrDifference(void)
 
 void writeDAC(unsigned char out)
 { // TODO: test all values of this with a multimeter
-	out = out + 127;
+	// out = out + 127;
 	/*
-	GPIO_PORTB_DATA_R &= ~0xFC;
+	GPIO_PORTB_DATA_R &=    ~0xFC;
 	GPIO_PORTB_DATA_R |= out&0xFC;
-	GPIO_PORTD_DATA_R &= ~0x03;
+	GPIO_PORTD_DATA_R &=    ~0x03;
 	GPIO_PORTD_DATA_R |= out&0x03;
 	*/
-	GPIO_PORTB_DATA_R = out;
-	GPIO_PORTD_DATA_R = out;
+	GPIO_PORTB_DATA_R = out&0xFC;
+	// GPIO_PORTD_DATA_R = out&0x03;
 }
 
 // 80Mhz = 12.5ns period

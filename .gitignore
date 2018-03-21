@@ -2,8 +2,13 @@
 *.wav
 *.bin
 *.html
-*.html
-*.html
 *.ffpreset
-*.wav
 *.Blake
+*.pyc
+*.axf
+*.htm
+*.map
+*.dep
+*.o
+*.crf
+*.mp3
