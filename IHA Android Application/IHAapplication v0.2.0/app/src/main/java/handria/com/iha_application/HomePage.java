@@ -9,6 +9,8 @@ import android.text.Layout;
 import android.util.Log;
 import android.view.View;
 import android.widget.EditText;
+import android.widget.FrameLayout;
+import android.widget.ProgressBar;
 import android.widget.RelativeLayout;
 import android.widget.TableLayout;
 import android.widget.TableRow;
@@ -38,13 +40,21 @@ public class HomePage extends AppCompatActivity implements onComplete{
         songList.add("Wonderwall.mp3");
         initializeTableView();
         then = this;
+        FrameLayout layout = (FrameLayout) findViewById(R.id.layover);
+        layout.setBackgroundColor(Color.argb(255, 198, 199, 201));
+        ProgressBar loadingSign = (ProgressBar) findViewById(R.id.isLoading);
+        loadingSign.animate();
         SocketConnection _connection = new SocketConnection(then, this);
-        _connection.executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR, port, "stat");
+        _connection.executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR, port, "stat", "true");
     }
 
 
     @Override
     public void onConnectAttempt(String[] info){
+        FrameLayout layout = (FrameLayout) findViewById(R.id.layover);
+        layout.setBackgroundColor(Color.TRANSPARENT);
+        ProgressBar loadingSign = (ProgressBar) findViewById(R.id.isLoading);
+        loadingSign.setVisibility(View.INVISIBLE);
         TextView ipName = (TextView) findViewById(R.id.ipName);
         TextView exIpName = (TextView) findViewById(R.id.exIpName);
         ipName.setText("Local IP NAME: "+info[0]);
@@ -81,8 +91,13 @@ public class HomePage extends AppCompatActivity implements onComplete{
                 @Override
                 public void onClick(View view) {
                     Log.d("SONG CLICK", "song name with "+title+" was clicked");
+                    FrameLayout layout = (FrameLayout) findViewById(R.id.layover);
+                    layout.setBackgroundColor(Color.argb(255, 198, 199, 201));
+                    ProgressBar loadingSign = (ProgressBar) findViewById(R.id.isLoading);
+                    loadingSign.setVisibility(View.VISIBLE);
+                    loadingSign.animate();
                     SocketConnection _connection = new SocketConnection(then, view.getContext());
-                    _connection.executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR, port,"play "+title);
+                    _connection.executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR, port, "play "+title, "true");
                 }
             });
             tableView.addView(row);

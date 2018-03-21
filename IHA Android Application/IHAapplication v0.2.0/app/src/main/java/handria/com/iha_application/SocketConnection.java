@@ -54,34 +54,50 @@ public class SocketConnection extends AsyncTask<String, Void, String[]> {
         try {
             int port = Integer.parseInt(params[0]);
             String msg = params[1];
+            boolean firstConnect = params[2].equals("true");
+
+            //hostName[0] - local ip
+            //hostName[1] - external ip
             String[] hostNames = extractIp();
+            if(msg.equals("stat") && firstConnect) {
+                //if the previous hostNames were both stored as INVALID
+                //that means that the previous ip scan was unable to get any
+                //available ip in the local network.
+                if(hostNames[1].equals("INVALID") && hostNames[0].equals("INVALID")){
+                    hostNames = findIp(port);
+                    saveIp(hostNames[0], hostNames[1]);
+                }
 
-
-            if(hostNames[1].equals("INVALID") && hostNames[0].equals("INVALID")){
-                hostNames = findIp(port);
-                saveIp(hostNames[0], hostNames[1]);
-            }
-
-            try {
-                if(hostNames[1].equals("Invalid Command")){
-                    _socket = new Socket(hostNames[0], port);
-                }else {
-                    _socket = new Socket(hostNames[1], port);
-                    if(!testExternalHost(_socket)){
+                //now we try to connect to the socket to check if it
+                //is valid or not.
+                try {
+                    if (hostNames[0].equals("INVALID")) {
+                        _socket = new Socket(hostNames[1], port);
+                    } else {
                         _socket = new Socket(hostNames[0], port);
-                    }else{
+                        if (!testExternalHost(_socket)) {
+                            _socket = new Socket(hostNames[1], port);
+                        } else {
+                            _socket = new Socket(hostNames[0], port);
+                        }
+                    }
+                } catch (Exception e) {
+                    hostNames = findIp(port);
+                    saveIp(hostNames[0], hostNames[1]);
+                    try {
+                        _socket = new Socket(hostNames[0], port);
+                    }catch(Exception eInternal){
+                        Log.e("CONNECTION ATTEMPT", "attempted to connect to socket hostName[0], but failed");
                         _socket = new Socket(hostNames[1], port);
                     }
+                    if (!testExternalHost(_socket)) {
+                        _socket = new Socket(hostNames[1], port);
+                    } else {
+                        _socket = new Socket(hostNames[0], port);
+                    }
                 }
-            }catch(Exception e){
-                hostNames = findIp(port);
-                saveIp(hostNames[0], hostNames[1]);
-                _socket = new Socket(hostNames[1], port);
-                if(!testExternalHost(_socket)){
-                    _socket = new Socket(hostNames[0], port);
-                }else{
-                    _socket = new Socket(hostNames[1], port);
-                }
+            }else{
+                _socket = new Socket(hostNames[0], port);
             }
             //send the commands to the server here.
             BufferedReader buffRead = new BufferedReader(new InputStreamReader(_socket.getInputStream()));
@@ -163,7 +179,10 @@ public class SocketConnection extends AsyncTask<String, Void, String[]> {
         }
     }
 
-
+    /**
+     * extract the ip names stored inside the application context.
+     * @return  String[] - local ip address, external ip address, (respectively)
+     */
     private String[] extractIp(){
         StringBuilder ipName = new StringBuilder();
         StringBuilder externalIpName = new StringBuilder();
@@ -189,6 +208,14 @@ public class SocketConnection extends AsyncTask<String, Void, String[]> {
         }
     }
 
+    /**
+     * Ping sweep function.
+     * this function will ping all the available subnets in the area with port: 14123
+     * once a socket is reachable with port 14123, then return the local ip name address
+     * along with the external ip ( if available )
+     * @param port - 14123
+     * @return  String[] - local ip address, external ip address, (respectively)
+     */
     private String[] findIp(int port){
         String hostName = "INVALID";
         String externalHostName = "INVALID";
@@ -266,7 +293,6 @@ public class SocketConnection extends AsyncTask<String, Void, String[]> {
             Log.e("getExternalHostName", "COULDN'T GET EXTERNAL HOST NAME::FATAL ERROR");
             return "";
         }
-
     }
 
     @Override
