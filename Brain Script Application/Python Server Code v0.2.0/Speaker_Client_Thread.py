@@ -6,28 +6,19 @@ import sharedMem
 import os
 
 # global variables
-SPKN = 0
-CLIENT = 0
 
-def returnMessage(payload):
-    global SPKN
-    global CLIENT
-    print('Speaker - Client #{0} Response: {1}'.format(SPKN,payload))
-    CLIENT.send(payload.encode('utf-8'))
+def returnMessage(payload, spkn, client):
+    print('Speaker - Client #{0} Response: {1}'.format(spkn,payload))
+    client.send(payload.encode('utf-8'))
 #end returnMessage
 
 def Speaker_Client(client, spkn, addr, self):
     # initialize variables for this file
-    global SPKN
-    global CLIENT
 
-    CLIENT = client
-    SPKN = spkn
-
-    sharedMem.speakersConnected.update({SPKN:1})
+    sharedMem.speakersConnected.update({spkn:1})
 
     print('')
-    print("Speaker - TCP Client #{0} connected from {1}...".format(SPKN,addr))
+    print("Speaker - TCP Client #{0} connected from {1}...".format(spkn,addr))
 
     #enter loop for handling client
     try:
@@ -36,26 +27,26 @@ def Speaker_Client(client, spkn, addr, self):
             data = client.recv(1)
             data = data.decode('utf-8')
             data = data.rstrip()
-            print('Speaker - Client #{0} Payload:  {1}'.format(SPKN,data))
+            print('Speaker - Client #{0} Payload:  {1}'.format(spkn,data))
             
             #interpret data and set return payload
             if(data == '?'):
-                returnMessage('y')
+                returnMessage('y', spkn, client)
             else:
-                returnMessage('n')
+                returnMessage('n', spkn, client)
             #endelse
             
             # repeat forever
         #endwhile
     except Exception as e:
-        print('Speaker - Client #{0} disconnected'.format(SPKN))
+        print('Speaker - Client #{0} disconnected'.format(spkn))
         print(e)
     #endexcept
 
     # While loop breaks out only if there is a connection error
     client.close()
     # this lets the UDP thread know that it can free the socket up again at this address
-    sharedMem.speakersConnected.update({SPKN:0})
+    sharedMem.speakersConnected.update({spkn:0})
 
     # send a udp packet to yourself to stop blocking 
     # the UDP thread so that it can exit

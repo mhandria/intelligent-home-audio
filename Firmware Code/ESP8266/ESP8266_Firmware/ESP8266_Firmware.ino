@@ -16,9 +16,9 @@ const unsigned int BAUD_RATE = 1658880;
 const unsigned int MAX_CHUNK_SIZE = 4096; // The largest UDP packet we have buffer space for
 
 // Set these three constants to speed up testing //
-const bool manualConnect = true;
-const bool writeManualConnectToEEPROM = true;
-const IPAddress IHA_SERVER(192,168,1,103);
+const bool manualConnect = false;
+const bool writeManualConnectToEEPROM = false;
+const IPAddress IHA_SERVER(192,168,1,248);
 
 // Global Variables //
 bool debug_enable;

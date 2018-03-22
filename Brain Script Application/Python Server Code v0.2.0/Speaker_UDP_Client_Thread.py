@@ -18,7 +18,6 @@ def sendSongChunk():
     global songToSend
     global songFileIndex
     global SPKN
-    global UDP_SOCKET
     global LAST_PERCENTAGE
 
     while(sharedMem.isSendingSong == False and sharedMem.speakersConnected[SPKN] == 1): #hang until a song needs to be sent
@@ -106,6 +105,7 @@ def Speaker_UDP_Client(udp_socket, spkn, addr):
         try:
             # if a packet is recieved from the address this thread is responsible for, and it is the special character 's'
             # then send the next chunk in the song sequence back to the speaker embeded system
+            
             data, packet_address = UDP_SOCKET.recvfrom(1)
 
             if(packet_address[0] == addr[0] and data.decode() == 's'):
