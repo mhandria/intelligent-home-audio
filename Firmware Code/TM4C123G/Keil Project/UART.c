@@ -6,13 +6,16 @@
 // Some functions are specifically for the IHA speaker network
 
 // Initialize UART0 (Port A) - USB
+// UART with 115,200 baud rate (assuming 80 MHz UART clock),
+// 8 bit word length, no parity bits, one stop bit, FIFOs enabled
+// Used for serial terminal debug
 void UART0_Init(void)
 {
   SYSCTL_RCGC1_R |= SYSCTL_RCGC1_UART0; // activate UART0
   SYSCTL_RCGC2_R |= SYSCTL_RCGC2_GPIOA; // activate port A
   UART0_CTL_R &= ~UART_CTL_UARTEN;      // disable UART
-  UART0_IBRD_R = 27;                    // IBRD = int(50,000,000 / (16 * 115,200)) = int(27.1267)
-  UART0_FBRD_R = 8;                     // FBRD = int(0.1267 * 64 + 0.5) = 8
+  UART0_IBRD_R = 43;                    //  IBRD = floor(80,000,000 / (16 * 115,200) = 26
+  UART0_FBRD_R = 26;                    //  FBRD = floor(0.4028 * 64 + 0.5) = 26
                                         // 8 bit word length (no parity bits, one stop bit, FIFOs)
   UART0_LCRH_R = (UART_LCRH_WLEN_8|UART_LCRH_FEN);
   UART0_CTL_R |= UART_CTL_UARTEN;       // enable UART
@@ -24,6 +27,9 @@ void UART0_Init(void)
 }
 
 // Initialize UART1 (Port B)
+// UART with x baud rate (assuming 80 MHz UART clock),
+// 8 bit word length, no parity bits, one stop bit, FIFOs enabled
+// Used for serial terminal debug
 void UART1_Init(void)
 {
 	SYSCTL_RCGC1_R |= 0x02;               // activate UART1
@@ -31,8 +37,10 @@ void UART1_Init(void)
   SYSCTL_RCGCGPIO_R |= 0x02;  
 	while((SYSCTL_PRGPIO_R&0x02) == 0){};
   UART1_CTL_R &= ~0x01;                 // disable UART
-  UART1_IBRD_R = 27;                    // IBRD = int(50,000,000 / (16 * 115,200)) = int(27.1267)
-  UART1_FBRD_R = 8;                     // FBRD = int(0.1267 * 64 + 0.5) = 8
+  // UART1_IBRD_R = 1;                     //  IBRD = floor(80,000,000 / (16 * 2,764,800)) = 1
+  // UART1_FBRD_R = 52;                    //  FBRD = floor(0.80845 * 64 + 0.5) = 52
+  UART1_IBRD_R = 3;                     //  IBRD = floor(80,000,000 / (16 * 1,658,880)) = 3
+  UART1_FBRD_R = 1;                     //  FBRD = floor(fract * 64 + 0.5) = 1
                                         // 8 bit word length (no parity bits, one stop bit, FIFOs)
   UART1_LCRH_R = (UART_LCRH_WLEN_8|UART_LCRH_FEN);
   UART1_CTL_R |= UART_CTL_UARTEN;       // enable UART

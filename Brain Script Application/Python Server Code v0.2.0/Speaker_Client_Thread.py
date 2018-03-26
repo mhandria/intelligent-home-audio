@@ -1,69 +1,55 @@
 #!/usr/bin/env python3
 # Thread that listens for commands from the speaker embeded system
-# Currently only supports 1 speaker
 
 import socket
-from threading import Thread 
-from socketserver import ThreadingMixIn
 import sharedMem
+import os
 
-def Speaker_Client(speaker_number, ADDR, BUFFER_SIZE):
-    global LED0
-    global LED1
+# global variables
+
+def returnMessage(payload, spkn, client):
+    print('Speaker - Client #{0} Response: {1}'.format(spkn,payload))
+    client.send(payload.encode('utf-8'))
+#end returnMessage
+
+def Speaker_Client(client, spkn, addr, self):
+    # initialize variables for this file
+
+    sharedMem.speakersConnected.update({spkn:1})
 
     print('')
-    print('Speaker connection thread #{0} started'.format(speaker_number))
+    print("Speaker - TCP Client #{0} connected from {1}...".format(spkn,addr))
 
-    while True: #tempoary tempoary loop for demo 2
-        try:
-            #create socket
-            server_sock = socket.socket(family=socket.AF_INET, type=socket.SOCK_STREAM)
-            server_sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-            server_sock.bind(ADDR)
-            server_sock.listen(5)
-        except:
-            print('ERROR: While creating speaker socket #{0}'.format(speaker_number))
+    #enter loop for handling client
+    try:
+        while True:
+            #get phone payload data
+            data = client.recv(1)
+            data = data.decode('utf-8')
+            data = data.rstrip()
+            print('Speaker - Client #{0} Payload:  {1}'.format(spkn,data))
+            
+            #interpret data and set return payload
+            if(data == '?'):
+                returnMessage('y', spkn, client)
+            else:
+                returnMessage('n', spkn, client)
+            #endelse
+            
+            # repeat forever
+        #endwhile
+    except Exception as e:
+        print('Speaker - Client #{0} disconnected'.format(spkn))
+        print(e)
+    #endexcept
 
-        #listen until speaker opens socket to server
-        print('Waiting for Speaker connection...')
-        speaker_client_sock, addr = server_sock.accept()
-        print("Speaker client connected from {0}...".format(addr))
+    # While loop breaks out only if there is a connection error
+    client.close()
+    # this lets the UDP thread know that it can free the socket up again at this address
+    sharedMem.speakersConnected.update({spkn:0})
 
-        #when a speaker connects, open a new thread to listen for the next speaker
-        try:
-            newThreadNumber = speaker_number + 1
-            # t = Thread(target=Speaker_Client, args=(newThreadNumber, ADDR, BUFFER_SIZE))
-            # t.start() #this will never work because it's using the same port, fix sometime after demo 2
-        except:
-            print('ERROR: Something went wrong creating a new speakerThread')
-            while True:
-                a = 0
-
-        try:
-            while True:
-                #get phone payload data
-                data = speaker_client_sock.recv(BUFFER_SIZE)
-                data = data.decode('utf-8')
-                data = data.rstrip()
-                print('Speaker client #{0} Payload: {1}'.format(speaker_number,data))
-
-                #interpret data and set return payload
-                if(sharedMem.LED0 and sharedMem.LED1):
-                    payload = 'y'
-                elif(sharedMem.LED0):
-                    payload = 'r'
-                elif(sharedMem.LED1):
-                    payload = 'g'
-                else:
-                    payload = 'n'
-                #endelse
-
-                #send return message and close the socket
-                speaker_client_sock.send(payload.encode('utf-8'))
-                # repeat forever
-            #endwhile
-        except:
-            print('Speaker client #{0} disconnected'.format(speaker_number))
-    speaker_client_sock.close()
-    #endwhile
+    # send a udp packet to yourself to stop blocking 
+    # the UDP thread so that it can exit
+    s = socket.socket(socket.AF_INET,socket.SOCK_DGRAM)
+    s.sendto('!'.encode(),(self, 14124))
 #endSpeaker_Client
