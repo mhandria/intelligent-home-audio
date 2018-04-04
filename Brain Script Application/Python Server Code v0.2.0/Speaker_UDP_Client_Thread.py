@@ -8,27 +8,24 @@ import os
 
 # constants
 SONG_CHUNK_SIZE = 1400
-SPKN = 0
 songFileIndex = 0
-UDP_SOCKET = 0
-LAST_PERCENTAGE = 0
+udp_socket = 0
+lastPercentage = 0
+spkn = -1
 
 def sendSongChunk():
     global isSendingSong
     global songToSend
-    global songFileIndex
-    global SPKN
-    global LAST_PERCENTAGE
 
-    while(sharedMem.isSendingSong == False and sharedMem.speakersConnected[SPKN] == 1): #hang until a song needs to be sent
+    while(sharedMem.isSendingSong == False and sharedMem.speakersConnected[spkn] == 1): #hang until a song needs to be sent
         songFileIndex   = 44 # reset the index for the next song file
-        LAST_PERCENTAGE = 0
+        lastPercentage = 0
     #endwhile
 
     # if the TCP thread detected a disconnect, procede
     # to exit this thread to free the UDP port as well
     # otherwise send a chunk
-    if(sharedMem.speakersConnected[SPKN] == 1):
+    if(sharedMem.speakersConnected[spkn] == 1):
         try:
             # open the file
             if(os.name == 'nt'): #if windows
@@ -70,18 +67,18 @@ def sendSongChunk():
             songChunk = songFile.read(songChunkSize)
 
             # send the chunk
-            UDP_SOCKET.sendto(songChunk,(ADDR, 14124))
+            udp_socket.sendto(songChunk,(ADDR, 14124))
 
             # update the index to point to the next chunk
             songFileIndex = songFileIndex + SONG_CHUNK_SIZE
 
-            # print('Speaker - Client #{0} Sent Song Chunk #{1}'.format(SPKN,round((songFileIndex/SONG_CHUNK_SIZE - 1))))
-            if(donePercent - LAST_PERCENTAGE > 1):
+            # print('Speaker - Client #{0} Sent Song Chunk #{1}'.format(spkn,round((songFileIndex/SONG_CHUNK_SIZE - 1))))
+            if(donePercent - lastPercentage > 1):
                 print('Song data {0}% sent'.format(round(donePercent)))
-                LAST_PERCENTAGE = donePercent
+                lastPercentage = donePercent
             #endif
         except Exception as e:
-            print('Speaker - Client #{0} ERROR: Sending Song Chunk #{1}'.format(SPKN,round((songFileIndex/SONG_CHUNK_SIZE))))
+            print('Speaker - Client #{0} ERROR: Sending Song Chunk #{1}'.format(spkn,round((songFileIndex/SONG_CHUNK_SIZE))))
             print(e)
         songFile.close()
         #endexcept
@@ -90,23 +87,17 @@ def sendSongChunk():
 
 def Speaker_UDP_Client(udp_socket, spkn, addr):
     # Initialize Memory
-    global ADDR
-    global SPKN
-    global songFileIndex
-    global UDP_SOCKET
-
-    ADDR = addr[0]
-    SPKN = spkn
+    addr = addr[0]
     songFileIndex = 44
-    UDP_SOCKET = udp_socket
+    udp_socket
 
-    print("Speaker - UDP Socket #{0} connected for {1}...".format(SPKN,addr[0]))
-    while(sharedMem.speakersConnected[SPKN] == 1):
+    print("Speaker - UDP Socket #{0} connected for {1}...".format(spkn,addr[0]))
+    while(sharedMem.speakersConnected[spkn] == 1):
         try:
             # if a packet is recieved from the address this thread is responsible for, and it is the special character 's'
             # then send the next chunk in the song sequence back to the speaker embeded system
             
-            data, packet_address = UDP_SOCKET.recvfrom(1)
+            data, packet_address = udp_socket.recvfrom(1)
 
             if(packet_address[0] == addr[0] and data.decode() == 's'):
                 sendSongChunk()
@@ -117,12 +108,12 @@ def Speaker_UDP_Client(udp_socket, spkn, addr):
             #endelif
 
         except Exception as e:
-            print("Speaker - ERROR: UDP Client #{0}, ".format(SPKN))
+            print("Speaker - ERROR: UDP Client #{0}, ".format(spkn))
             print(e)
         #endexcept
     #endwhile
 
-    UDP_SOCKET.close()
-    sharedMem.speakersConnected.pop(SPKN)
-    print("Speaker - UDP Client #{0} thread closed.".format(SPKN))
+    udp_socket.close()
+    sharedMem.speakersConnected.pop(spkn)
+    print("Speaker - UDP Client #{0} thread closed.".format(spkn))
 # end Speaker_UDP_Client
