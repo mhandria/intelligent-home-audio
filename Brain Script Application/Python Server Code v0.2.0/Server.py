@@ -29,7 +29,7 @@ import sharedMem
 
 #Constants
 # HOST        = wlan0           #uncomment for tinkerboard (as well as above 2 statements)
-HOST        = '192.168.1.103' #uncomment for Blake's Desktop on his home network
+HOST        = '192.168.1.104' #uncomment for Blake's Desktop on his home network
 # HOST        = '192.168.1.17'  #uncomment for Blake's Laptop on mobile hotspot
 # HOST        = '192.168.1.131' #uncoment for Michael's Laptop.
 

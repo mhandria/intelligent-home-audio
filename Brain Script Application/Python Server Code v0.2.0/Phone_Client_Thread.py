@@ -6,16 +6,24 @@ from socketserver import ThreadingMixIn
 import sharedMem
 import requests
 import os
+from mutagen.easyid3 import EasyID3 as ID3
 
+# Constants #
 BUFFER_SIZE = 256
+NUL = '\x00'
+EOT = '\x04'
+ACK = '\x06'
+NAK = '\x15'
+GS  = '\x1D'
+US  = '\x1F'
 
 # Functions #
 def getExtIP():
     try:
-        extIP = requests.get("https://api.ipify.org").text
+        extIP = ACK + requests.get("https://api.ipify.org").text
     except Exception as e:
         print('Phone - ERROR: Failed to get public IP address.')
-        extIP = 'na'
+        extIP = NAK
     #endexcept
     return extIP
 #end getExtIP
@@ -24,44 +32,33 @@ def playSong(fileName):
     global isSendingSong
     global songToSend
 
-    # TODO: make this code less redundant
     # TODO: if the file already exists in temp, don't make another
     # TODO: if the number of files or filesize of /temp/ passes a 
     #       threshold, then start deleting files as you make more
     # TODO: append silence to end of song so that it
     try:
         if(os.name == 'nt'): #if testing the server on windows
-            # check if the file exists
-            if(os.path.isfile(os.getcwd() + '/library/' + fileName)):
-                #convert the file to mono 16-bit 44.1KHz .wav into /temp/
-                print('Converting ' + fileName)
-                os.system('convert.bat ' + '"' + fileName + '"')
-                print('Converted')
-
-                # set memory to initiate song sending
-                sharedMem.isSendingSong = True
-                sharedMem.songToSend = fileName + '.wav'
-
-                # return sucessful message and continue listening for phone commands
-                returnPayload = 'Playing: ' + fileName
-            else: #if the file name doesn't exist
-                returnPayload = 'ERROR: File "' + fileName + '" does not exist'
-            #endelse
+            libPath  = os.getcwd() + '/library/'
+            convPath = os.getcwd() + '/convert.bat '
         else: # otherwise it's the linux server
-            if(os.path.isfile('/home/linaro/Desktop/library/' + fileName)):
-                #convert the file to mono 16-bit 44.1KHz .wav into /temp/
-                print('Converting ' + fileName)
-                os.system('/home/linaro/Desktop/library/convert.sh ' + '"' + fileName + '"')
-                print('Converted')
+            libPath  = '/home/linaro/Desktop/Source/'
+            convPath = '/home/linaro/Desktop/Source/convert.sh '
+        #endelse
 
-                # set memory to initiate song sending
-                sharedMem.isSendingSong = True
-                sharedMem.songToSend = fileName + '.wav'
+        if(os.path.isfile(libPath + fileName)):
+            #convert the file to mono 16-bit 44.1KHz .wav into /temp/
+            print('Converting ' + fileName)
+            os.system(convPath + '"' + fileName + '"')
+            print('Converted')
 
-                # return sucessful message and continue listening for phone commands
-                returnPayload = 'Playing: ' + fileName
-            else: #if the file name doesn't exist
-                returnPayload = 'ERROR: File "' + fileName + '" does not exist'
+            # set memory to initiate song sending
+            sharedMem.isSendingSong = True
+            sharedMem.songToSend = fileName + '.wav'
+
+            # return sucessful message and continue listening for phone commands
+            returnPayload = ACK+'Playing: ' + fileName
+        else: #if the file name doesn't exist
+            returnPayload = NAK+'ERROR: File "' + fileName + '" does not exist'
         #endelse
     except Exception as e:
         print('Phone - ERROR: Failed to play "' + fileName + '"')
@@ -80,17 +77,66 @@ def playSong(fileName):
 def stopSong():
     if(sharedMem.isSendingSong):
         sharedMem.isSendingSong = False
-        returnPayload = 'OK'
+        returnPayload = ACK
     else:
-        returnPayload = 'No song is playing'
+        returnPayload = NAK+'No song is playing'
     return returnPayload
 #end stopSong
 
+def getSongList(client):
+    print('Phone - Sending song list...')
+
+    if(os.name == 'nt'): # if windows
+        filepath = os.getcwd() + '/library/'
+    else: #otherwise debian server
+        filepath = '/home/linaro/Desktop/library/'
+
+    # get a list of all the filenames in the library
+    files = [f for f in os.listdir(filepath) if os.path.isfile(os.path.join(filepath, f))]
+
+    if not files: # if the library is empty return NAK
+        payload = NAK
+    else: # otherwise send all the information, one song per packet
+        payload = ACK
+        client.send(payload.encode('utf-8'))
+
+        tags = ['title', 'artist', 'album'] 
+
+        for f in files:
+            # create ID3 tag reader
+            mf = ID3(filepath + f)
+        
+            # add filename to payload
+            payload = f
+
+            for t in tags:
+                payload = payload + US
+
+                try:
+                    # add tag to payload if it exists
+                    payload = payload + mf[t][0]
+                except:
+                    # otherwise it's <NUL>
+                    payload = payload + NUL
+                #endexcept
+            #endfor
+
+            # group seperator to show end of current song
+            payload = payload + GS
+
+            #send the payload, move to next song
+            print(payload)
+            client.send(payload.encode('utf-8'))
+        #endfor
+
+        payload = EOT
+    #endelse
+    print('Send song list')
+    client.send(payload.encode('utf-8'))
+#end getSongList
+
 # Main #
 def Phone_Client(ADDR):
-    global LED0
-    global LED1
-
     print('')
     print('Phone - Thread started')
 
@@ -127,7 +173,7 @@ def Phone_Client(ADDR):
 
             # interpret command and set return payload
             if(data == 'stat'):
-                payload = 'OK'
+                payload = ACK
             elif(data == 'getExtIP'):
                 payload = getExtIP()
             elif(data.startswith('play ')):
@@ -135,8 +181,10 @@ def Phone_Client(ADDR):
                 payload  = playSong(songName)
             elif(data == 'stop'):
                 payload = stopSong()
+            elif(data == 'getSongList'):
+                payload = getSongList(phone_client_sock)
             else:
-                payload = 'Invalid Command'
+                payload = NAK+'Invalid Command'
             #endelse
 
             print('Phone - Response: {0}'.format(payload))

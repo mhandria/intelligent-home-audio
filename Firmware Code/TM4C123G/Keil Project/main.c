@@ -42,6 +42,7 @@ void pulseLEDs(void);   // Flashy sequence to show the board reset
 void delay_ms(int t);
 void writeBuff(unsigned char in);
 unsigned char readBuff(void);
+void wait_for_procede(void);
 unsigned int getPtrDifference(void);
 void writeDAC(unsigned char out);
 void SysTick_Init(void);           // Executes SysTick_Handler ever x periods
@@ -52,8 +53,6 @@ const unsigned long BUFFER_SIZE = 30000;
 const double SAMPLE_FREQ = 44100;
 
 // Global Variables Section //
-
-unsigned char returnChar;
 
 unsigned char sampleBuffer[BUFFER_SIZE];
 unsigned char *sampleReadPtr;
@@ -68,6 +67,10 @@ int main(void)
 {
 	init();
 	
+	delay_ms(1000);
+  UART1_SendChar('s'); // MCU is ready to recieve song data
+	
+	delay_ms(1000);
   UART1_SendChar('s'); // MCU is ready to recieve song data
 	
 	UART0_SendString("Entering Main Loop");
@@ -203,9 +206,6 @@ void ESP_Init(void)
 	unsigned char in;
 	in = ' ';
 	
-	UART0_SendString("Reset ESP8266");
-	UART0_CRLF();
-	
 	// Handshake
 	
 	while(in != 'b')
@@ -221,9 +221,11 @@ void ESP_Init(void)
 		}
 	}
 	
+	
 	delay_ms(100);
 	UART1_SendChar('c');
 	
+	UART0_CRLF();
 	UART0_SendString("ESP8266 Serial Handshake Completed");
 	UART0_CRLF();
 	
@@ -231,30 +233,18 @@ void ESP_Init(void)
 	GPIO_PORTF_DATA_R |=  0x02; // RED LED = Serial Connection Established
 	
 	// Wi-Fi connected char
-	returnChar = ' ';
-	while(returnChar != 'Y')
-	{
-		returnChar = UART1_GetChar();
-		// UART0_SendChar(returnChar);
-	}
+	wait_for_procede();
 	
-	UART0_SendString("ESP8266 Wi-Fi Connection OK?: ");
-	UART0_SendChar(returnChar);
+	UART0_SendString("ESP8266 Wi-Fi Connection OK");
 	UART0_CRLF();
 	
 	GPIO_PORTF_DATA_R &= ~0x0E; // Turn off LEDs
 	GPIO_PORTF_DATA_R |=  0x04; // BLUE LED = Connected to Wi-Fi Network
 	
 	// Server connected char
-	returnChar = ' ';
-	while(returnChar != 'Y')
-	{
-		returnChar = UART1_GetChar();
-		// UART0_SendChar(returnChar);
-	}
+	wait_for_procede();
 	
-	UART0_SendString("ESP8266 Server-Client Connection OK?: ");
-	UART0_SendChar(returnChar);
+	UART0_SendString("ESP8266 Server-Client Connection OK");
 	UART0_CRLF();
 	
 	GPIO_PORTF_DATA_R &= ~0x0E; // Turn off LEDs
@@ -416,6 +406,16 @@ void writeDAC(unsigned char out)
 	*/
 	GPIO_PORTB_DATA_R = out&0xFC;
 	// GPIO_PORTD_DATA_R = out&0x03;
+}
+
+void wait_for_procede(void)
+{
+	unsigned char in = ' ';
+	while(in != ENQ)
+	{
+		in = UART1_GetChar();
+	}
+	UART1_SendChar(ACK);
 }
 
 // 80Mhz = 12.5ns period

@@ -10,22 +10,48 @@ PORT = 14123
 BUFSIZ = 256
 ADDR = (host, PORT)
 
-while True:
-    print('')
-    payload = input("Payload: ")
+NUL = 0
+EOT = 4
+ACK = 6
+NAK = 21
+GS  = 29
+US  = 31
 
-    print('creating socket...')
-    client_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    sock_addr = (host, PORT)
-    client_sock.connect(sock_addr)
-    print("Socket created on host {0} and port {1}".format(host, PORT))
-    
-    client_sock.send(payload.encode('utf-8'))
-    print('Sent payload, awaiting reponse')
-    data = client_sock.recv(BUFSIZ)
-    
-    print("Server response: {0}".format(data.decode('utf-8')))
-    
-    client_sock.close()
-    print("Socket closed.")
+while True:
+    try:
+        print('')
+        payload = input("Payload: ")
+
+        #send payload
+        client_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        sock_addr = (host, PORT)
+        client_sock.connect(sock_addr)
+        client_sock.send(payload.encode('utf-8'))
+        print("Socket open.")
+
+        if(payload == 'getSongList'):
+            data = ' '
+            while(data != EOT):
+                data = client_sock.recv(BUFSIZ)
+                print(data.decode('utf-8'))
+        else:
+            data = client_sock.recv(BUFSIZ)
+            
+            if(ord(data) == ACK):
+                print('Server: <ACK>')
+            elif(ord(data) == NAK):
+                print('Server: <NAK>')
+            elif(ord(data) == EOT):
+                print('Server: <EOT>')
+            else:
+                print("Server: {0}".format(data.decode('utf-8')))
+            #endelse
+        #endelse
+        
+        client_sock.close()
+        print("Socket closed.")
+    except Exception as e:
+        print('ERROR:')
+        print(e)
+    #endexcept
 #endwhile

@@ -3,6 +3,8 @@
 #include <WiFiUDP.h>
 #include <EEPROM.h>
 #include "ESP8266Ping\src\ESP8266Ping.h"
+#define ENQ 5
+#define ACK 6
 
 // yield()          - lets the processor run background tasks (networking)
 // ESP.wdtDisable() - disables only the software watchdog timer
@@ -11,7 +13,7 @@
 // Constants //
 const char* ssid     = "wigglewiggle";
 const char* password = "I|\\|s+@|\\|+_R@m3|\\|_|\\|00d13s";
-const unsigned int BAUD_RATE = 1658880;
+const unsigned int BAUD_RATE = 1203005;
 // const unsigned int BAUD_RATE = 115200; // use for terminal debug in place of MCU communication
 const unsigned int MAX_CHUNK_SIZE = 4096; // The largest UDP packet we have buffer space for
 
@@ -43,7 +45,9 @@ void setup()
   // Initialize communications
   UART_init();
   wifi_init();
+  procede();
   client_init();
+  procede();
 }
 
 // Main program loop, runs after setup //
@@ -129,7 +133,7 @@ void wifi_init()
   }
   
   ESP.wdtFeed();
-  Serial.print("Y");  // TODO: make this blocking without an acknowledgement
+  
   debugLine(" ");
   debugStr("Connected to WiFi using address: ");
   debugLine(WiFi.localIP().toString());
@@ -214,11 +218,6 @@ void client_init()
   
   delay(100);
   debugLine("Connected!");
-  Serial.print("Y"); // TODO: make this blocking without an acknowledgement
-  delay(100);
-  Serial.print("Y");
-  delay(100);
-  Serial.print("Y");
 
   // Setup UDP listening
   client_udp.begin(14124);
@@ -525,6 +524,23 @@ void debugWrite(byte b)
   }
 }
 
+// Lets the MCU know that it's finished executing the current code block
+// and is ready to procede to the next. Blocks code execution
+// until an acknowledge is returned from the MCU
+void procede(void)
+{
+  Serial.flush();
+  unsigned char in = ' ';
+  while(in != ACK)
+  {
+    Serial.write((unsigned char)ENQ);
+    delay(1000);
+    if(Serial.available() > 0)
+    {
+      in = Serial.read();
+    }
+  }
+}
 
 void debugPrintAddr(uint8_t* addr)
 {
