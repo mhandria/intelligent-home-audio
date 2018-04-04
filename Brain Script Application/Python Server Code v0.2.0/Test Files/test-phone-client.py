@@ -17,6 +17,9 @@ NAK = 21
 GS  = 29
 US  = 31
 
+logfile = open('test-phone-client.log','w')
+logfile.close()
+
 while True:
     try:
         print('')
@@ -31,21 +34,38 @@ while True:
 
         if(payload == 'getSongList'):
             data = ' '
-            while(data != EOT):
+            while(ord(data[0]) != EOT):
                 data = client_sock.recv(BUFSIZ)
-                print(data.decode('utf-8'))
+                data = data.decode('utf-8')
+                print(data)
+                logfile = open('test-phone-client.log','a')
+                logfile.write(data)
+                logfile.write('\n')
+                logfile.close()
+            #endwhile
         else:
             data = client_sock.recv(BUFSIZ)
-            
-            if(ord(data) == ACK):
+            data = data.decode('utf-8')
+            if(ord(data[0]) == ACK):
                 print('Server: <ACK>')
-            elif(ord(data) == NAK):
+                data = data + ' '
+                print(data[1:])
+            elif(ord(data[0]) == NAK):
                 print('Server: <NAK>')
-            elif(ord(data) == EOT):
+                data = data + ' '
+                print(data[1:])
+            elif(ord(data[0]) == EOT):
                 print('Server: <EOT>')
+                data = data + ' '
+                print(data[1:])
             else:
-                print("Server: {0}".format(data.decode('utf-8')))
+                print("Server: {0}".format(data))
             #endelse
+
+            logfile = open('test-phone-client.log','a')
+            logfile.write(data)
+            logfile.write('\n')
+            logfile.close()
         #endelse
         
         client_sock.close()

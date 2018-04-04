@@ -101,38 +101,50 @@ def getSongList(client):
         client.send(payload.encode('utf-8'))
 
         tags = ['title', 'artist', 'album'] 
-
+        mf = None
         for f in files:
-            # create ID3 tag reader
-            mf = ID3(filepath + f)
-        
-            # add filename to payload
-            payload = f
+            try:
+                # create ID3 tag reader
+                mf = ID3(filepath + f)
+                validID3 = True
+            except:
+                validID3 = False
+            #endexcept
 
-            for t in tags:
-                payload = payload + US
+            
 
-                try:
-                    # add tag to payload if it exists
-                    payload = payload + mf[t][0]
-                except:
-                    # otherwise it's <NUL>
-                    payload = payload + NUL
-                #endexcept
-            #endfor
+            if(validID3):
+                # add filename to payload
+                payload = f
 
+                for t in tags:
+                    payload = payload + US # mark new attribute by unit seperator
+
+                    try:
+                        # add tag to payload if it exists
+                        payload = payload + mf[t][0]
+                    except:
+                        # otherwise it's <NUL>
+                        payload = payload + NUL
+                    #endexcept
+                #endfor
+    
+            else:
+                payload = f
+                for t in tags: payload = payload + NUL + US
+            #endelse
+            
             # group seperator to show end of current song
             payload = payload + GS
-
+            
             #send the payload, move to next song
             print(payload)
             client.send(payload.encode('utf-8'))
         #endfor
 
-        payload = EOT
+        returnPayload = EOT
     #endelse
-    print('Send song list')
-    client.send(payload.encode('utf-8'))
+    return returnPayload    
 #end getSongList
 
 # Main #
