@@ -69,17 +69,11 @@ void loop()
     }
   }
   
-  /*
   if(!client.connected())
   {
-    debugLine("The connection with the server has been lost. Reconnecting...");
-    Serial.write('!');
     // If we're disconnected try to reconnect forever
-    clientReconnect();
-    debugLine("The connection with the server has been restored");
-    Serial.write('y');
+    clientReconnect(); 
   }
-  */
   // TODO: Check if Wi-Fi disconnected, if so, reconnect and update MCU LED
 }
 
@@ -425,12 +419,16 @@ bool IPAddr_isEqual(uint8_t addr0[4], uint8_t addr1[4])
 // no longer connected to the server //
 void clientReconnect()
 {
+  debugLine("The connection with the server has been lost. Reconnecting...");
+  
   bool result = false;
   while(result == false)
   {
     result = client.connect(IHA_Server, 14124);
     delay(3000); // try again in 3 seconds
   }
+
+  debugLine("The connection with the server has been restored");
 }
 //                          //
 //                          //
