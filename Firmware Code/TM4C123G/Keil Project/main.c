@@ -354,13 +354,12 @@ unsigned char readBuff(void)
 	if(sampleWritePtr == sampleReadPtr && !arePtrsMisaligned)
 	{ // if the read pointer caught up to the write pointer, 
 		// then play silence
-		/*
+		
 		if(songPlaying)
 		{
 			UART0_SendString("Samples came in too slow");
 			UART0_CRLF();
 		}
-		*/
 	}
 	else
 	{ // otherwise read the buffer and update the pointer

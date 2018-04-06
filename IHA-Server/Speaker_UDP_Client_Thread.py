@@ -5,6 +5,7 @@
 import socket
 import sharedMem
 import os
+import time
 
 # constants
 SONG_CHUNK_SIZE = 1400
@@ -25,15 +26,15 @@ def sendSongChunk():
     global UDP_SPKN
     global UDP_ADDR
 
-    while(sharedMem.isSendingSong == False and sharedMem.speakersConnected[UDP_SPKN] == 1): #hang until a song needs to be sent
+    if(sharedMem.isSendingSong == False): #hang until a song needs to be sent
         UDP_songFileIndex   = 44 # reset the index for the next song file
         UDP_lastPercentage = 0
     #endwhile
 
-    # if the TCP thread detected a disconnect, procede
-    # to exit this thread to free the UDP port as well
+    # if the TCP thread detected a disconnect,
+    # proceede to exit this thread
     # otherwise send a chunk
-    if(sharedMem.speakersConnected[UDP_SPKN] == 1):
+    if(sharedMem.speakersConnected[UDP_SPKN] == 1 and sharedMem.isSendingSong == True):
         try:
             # open the file
             if(os.name == 'nt'): #if windows
@@ -109,6 +110,8 @@ def Speaker_UDP_Client(udp_socket, spkn, addr):
     UDP_SPKN = spkn
     UDP_ADDR = addr[0]
 
+    startTime = time.time()
+
     print("Speaker - UDP Socket #{0} connected for {1}...".format(spkn,addr))
     while(sharedMem.speakersConnected[spkn] == 1):
         try:
@@ -120,10 +123,13 @@ def Speaker_UDP_Client(udp_socket, spkn, addr):
             if(packet_address[0] == UDP_ADDR and data.decode() == 's'):
                 sendSongChunk()
             elif(data.decode() == 'h'):
-                # TODO: Implement a heartbeat here so that the 
-                # connection can be severed if it takes too long
-                placeholder = 'blah'
+                startTime = time.time() #reset the WDT
             #endelif
+
+            timeSinceLastHB = time.time() - startTime
+            if(timeSinceLastHB > 10):
+                raise ValueError('WDT Expired')
+            #endif
 
         except Exception as e:
             print("Speaker - ERROR: UDP Client #{0}, ".format(spkn))

@@ -21,6 +21,7 @@ const unsigned int MAX_CHUNK_SIZE = 4096; // The largest UDP packet we have buff
 const bool manualConnect = false;
 const bool writeManualConnectToEEPROM = false;
 const IPAddress IHA_SERVER(192,168,1,248);
+const unsigned int HB_DELAY_COUNT = 1000;
 
 // Global Variables //
 bool debug_enable;
@@ -45,21 +46,36 @@ void setup()
   // Initialize communications
   UART_init();
   wifi_init();
-  procede();
+  proceede();
   client_init();
-  procede();
+  proceede();
 }
 
 // Main program loop, runs after setup //
+unsigned int HB_delay = 0;
 void loop()
 {
   ESP.wdtFeed();
+  
+  // Pulse the heartbeat if it's time
+  if(HB_delay >= HB_DELAY_COUNT)
+  {
+    HB_delay = 0;   // reset the counter
+    UDP_write('h'); // Send a heartbeat pulse
+  }
+  else
+  {
+    HB_delay++;
+  }
+  
+  ESP.wdtFeed();
 
+  // Check serial for incomming MCU commands
   if(Serial.available() > 1 && ticksSinceLastRequest > 1000)
   {
    input_char = Serial.read();
    Serial.flush(); // only read the first char, this prevents overflow
-   getSongChunk(); 
+   getSongChunk();
   }
   else
   {
@@ -523,9 +539,9 @@ void debugWrite(byte b)
 }
 
 // Lets the MCU know that it's finished executing the current code block
-// and is ready to procede to the next. Blocks code execution
+// and is ready to proceede to the next. Blocks code execution
 // until an acknowledge is returned from the MCU
-void procede(void)
+void proceede(void)
 {
   Serial.flush();
   unsigned char in = ' ';
