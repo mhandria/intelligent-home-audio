@@ -53,9 +53,6 @@ tcp_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)  # tcp socket
 tcp_socket.bind(MCU_ADDR)        # Bind to the port
 tcp_socket.listen(5)             # Now wait for client connection
 
-udp_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)   # udp socket
-udp_socket.bind((HOST,MCU_PORT))
-
 print(' ')
 print('Server is listening for speaker clients...')
 
@@ -66,7 +63,7 @@ while True:
    tcp_thread = Thread(target=Speaker_Client,     args=(tcp_client, speakerNumber, addr, HOST))
    tcp_thread.start()
    
-   udp_thread = Thread(target=Speaker_UDP_Client, args=(udp_socket, speakerNumber, addr))
+   udp_thread = Thread(target=Speaker_UDP_Client, args=(speakerNumber, addr, MCU_ADDR))
    udp_thread.start()
 
    speakerNumber = speakerNumber + 1

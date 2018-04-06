@@ -49,6 +49,8 @@ Section Cross References
     main.o(i.readBuff) refers to main.o(.bss) for sampleBuffer
     main.o(i.wait_for_procede) refers to uart.o(i.UART1_GetChar) for UART1_GetChar
     main.o(i.wait_for_procede) refers to uart.o(i.UART1_SendChar) for UART1_SendChar
+    main.o(i.writeBuff) refers to uart.o(i.UART0_SendString) for UART0_SendString
+    main.o(i.writeBuff) refers to uart.o(i.UART0_CRLF) for UART0_CRLF
     main.o(i.writeBuff) refers to main.o(.data) for sampleWritePtr
     main.o(i.writeBuff) refers to main.o(.bss) for sampleBuffer
     uart.o(i.UART0_CRLF) refers to uart.o(i.UART0_SendChar) for UART0_SendChar
@@ -164,13 +166,13 @@ Image Symbol Table
     i.main                                   0x00000950   Section        0  main.o(i.main)
     i.pulseLEDs                              0x000009b0   Section        0  main.o(i.pulseLEDs)
     i.readBuff                               0x00000a4c   Section        0  main.o(i.readBuff)
-    i.wait_for_procede                       0x00000ad8   Section        0  main.o(i.wait_for_procede)
-    i.writeBuff                              0x00000af0   Section        0  main.o(i.writeBuff)
-    i.writeDAC                               0x00000b44   Section        0  main.o(i.writeDAC)
-    .data                                    0x20000000   Section       19  main.o(.data)
-    .bss                                     0x20000014   Section    30000  main.o(.bss)
-    STACK                                    0x20007548   Section     1024  startup.o(STACK)
-    StackMem                                 0x20007548   Data           0  startup.o(STACK)
+    i.wait_for_procede                       0x00000b04   Section        0  main.o(i.wait_for_procede)
+    i.writeBuff                              0x00000b1c   Section        0  main.o(i.writeBuff)
+    i.writeDAC                               0x00000b9c   Section        0  main.o(i.writeDAC)
+    .data                                    0x20000000   Section       25  main.o(.data)
+    .bss                                     0x2000001c   Section    30000  main.o(.bss)
+    STACK                                    0x20007550   Section     1024  startup.o(STACK)
+    StackMem                                 0x20007550   Data           0  startup.o(STACK)
 
     Global Symbols
 
@@ -327,7 +329,7 @@ Image Symbol Table
     PLL_Init                                 0x0000040d   Thumb Code   120  pll.o(i.PLL_Init)
     PortB_Init                               0x00000489   Thumb Code   122  main.o(i.PortB_Init)
     PortF_Init                               0x00000519   Thumb Code   126  main.o(i.PortF_Init)
-    SysTick_Handler                          0x000005ad   Thumb Code    58  main.o(i.SysTick_Handler)
+    SysTick_Handler                          0x000005ad   Thumb Code    60  main.o(i.SysTick_Handler)
     SysTick_Init                             0x000005ed   Thumb Code    82  main.o(i.SysTick_Init)
     UART0_CRLF                               0x00000681   Thumb Code    16  uart.o(i.UART0_CRLF)
     UART0_Init                               0x00000691   Thumb Code   118  uart.o(i.UART0_Init)
@@ -345,21 +347,22 @@ Image Symbol Table
     init                                     0x000008d5   Thumb Code    78  main.o(i.init)
     main                                     0x00000951   Thumb Code    70  main.o(i.main)
     pulseLEDs                                0x000009b1   Thumb Code   148  main.o(i.pulseLEDs)
-    readBuff                                 0x00000a4d   Thumb Code    90  main.o(i.readBuff)
-    wait_for_procede                         0x00000ad9   Thumb Code    24  main.o(i.wait_for_procede)
-    writeBuff                                0x00000af1   Thumb Code    66  main.o(i.writeBuff)
-    writeDAC                                 0x00000b45   Thumb Code    10  main.o(i.writeDAC)
-    Region$$Table$$Base                      0x00000b54   Number         0  anon$$obj.o(Region$$Table)
-    Region$$Table$$Limit                     0x00000b74   Number         0  anon$$obj.o(Region$$Table)
+    readBuff                                 0x00000a4d   Thumb Code   132  main.o(i.readBuff)
+    wait_for_procede                         0x00000b05   Thumb Code    24  main.o(i.wait_for_procede)
+    writeBuff                                0x00000b1d   Thumb Code    82  main.o(i.writeBuff)
+    writeDAC                                 0x00000b9d   Thumb Code    10  main.o(i.writeDAC)
+    Region$$Table$$Base                      0x00000bac   Number         0  anon$$obj.o(Region$$Table)
+    Region$$Table$$Limit                     0x00000bcc   Number         0  anon$$obj.o(Region$$Table)
     sampleReadPtr                            0x20000000   Data           4  main.o(.data)
     sampleWritePtr                           0x20000004   Data           4  main.o(.data)
     arePtrsMisaligned                        0x20000008   Data           1  main.o(.data)
     ticksSinceLastRequest                    0x2000000c   Data           4  main.o(.data)
     value                                    0x20000010   Data           1  main.o(.data)
     decreasing                               0x20000011   Data           1  main.o(.data)
-    songPlaying                              0x20000012   Data           1  main.o(.data)
-    sampleBuffer                             0x20000014   Data       30000  main.o(.bss)
-    __initial_sp                             0x20007948   Data           0  startup.o(STACK)
+    tickSinceLastComplain                    0x20000014   Data           4  main.o(.data)
+    songPlaying                              0x20000018   Data           1  main.o(.data)
+    sampleBuffer                             0x2000001c   Data       30000  main.o(.bss)
+    __initial_sp                             0x20007950   Data           0  startup.o(STACK)
 
 
 
@@ -369,9 +372,9 @@ Memory Map of the image
 
   Image Entry point : 0x0000026d
 
-  Load Region LR_1 (Base: 0x00000000, Size: 0x00000b88, Max: 0xffffffff, ABSOLUTE)
+  Load Region LR_1 (Base: 0x00000000, Size: 0x00000be8, Max: 0xffffffff, ABSOLUTE)
 
-    Execution Region ER_RO (Base: 0x00000000, Size: 0x00000b74, Max: 0xffffffff, ABSOLUTE)
+    Execution Region ER_RO (Base: 0x00000000, Size: 0x00000bcc, Max: 0xffffffff, ABSOLUTE)
 
     Base Addr    Size         Type   Attr      Idx    E Section Name        Object
 
@@ -410,27 +413,27 @@ Memory Map of the image
     0x000008d4   0x0000007c   Code   RO           20    i.init              main.o
     0x00000950   0x00000060   Code   RO           21    i.main              main.o
     0x000009b0   0x0000009c   Code   RO           22    i.pulseLEDs         main.o
-    0x00000a4c   0x0000008c   Code   RO           23    i.readBuff          main.o
-    0x00000ad8   0x00000018   Code   RO           24    i.wait_for_procede  main.o
-    0x00000af0   0x00000054   Code   RO           25    i.writeBuff         main.o
-    0x00000b44   0x00000010   Code   RO           26    i.writeDAC          main.o
-    0x00000b54   0x00000020   Data   RO          263    Region$$Table       anon$$obj.o
+    0x00000a4c   0x000000b8   Code   RO           23    i.readBuff          main.o
+    0x00000b04   0x00000018   Code   RO           24    i.wait_for_procede  main.o
+    0x00000b1c   0x00000080   Code   RO           25    i.writeBuff         main.o
+    0x00000b9c   0x00000010   Code   RO           26    i.writeDAC          main.o
+    0x00000bac   0x00000020   Data   RO          263    Region$$Table       anon$$obj.o
 
 
-    Execution Region ER_RW (Base: 0x20000000, Size: 0x00000014, Max: 0xffffffff, ABSOLUTE)
-
-    Base Addr    Size         Type   Attr      Idx    E Section Name        Object
-
-    0x20000000   0x00000013   Data   RW           29    .data               main.o
-
-
-    Execution Region ER_ZI (Base: 0x20000014, Size: 0x00007934, Max: 0xffffffff, ABSOLUTE)
+    Execution Region ER_RW (Base: 0x20000000, Size: 0x0000001c, Max: 0xffffffff, ABSOLUTE)
 
     Base Addr    Size         Type   Attr      Idx    E Section Name        Object
 
-    0x20000014   0x00007530   Zero   RW           27    .bss                main.o
-    0x20007544   0x00000004   PAD
-    0x20007548   0x00000400   Zero   RW            1    STACK               startup.o
+    0x20000000   0x00000019   Data   RW           29    .data               main.o
+
+
+    Execution Region ER_ZI (Base: 0x2000001c, Size: 0x00007934, Max: 0xffffffff, ABSOLUTE)
+
+    Base Addr    Size         Type   Attr      Idx    E Section Name        Object
+
+    0x2000001c   0x00007530   Zero   RW           27    .bss                main.o
+    0x2000754c   0x00000004   PAD
+    0x20007550   0x00000400   Zero   RW            1    STACK               startup.o
 
 
 ==============================================================================
@@ -440,15 +443,15 @@ Image component sizes
 
       Code (inc. data)   RO Data    RW Data    ZI Data      Debug   Object Name
 
-      1548        400          0         19      30000       9340   main.o
+      1636        428          0         25      30000       9474   main.o
        124          4          0          0          0        427   pll.o
        672        622          0          0       1024        996   startup.o
        468         64          0          0          0       3649   uart.o
 
     ----------------------------------------------------------------------
-      2814       1090         32         20      31028      14412   Object Totals
+      2902       1118         32         28      31028      14546   Object Totals
          0          0         32          0          0          0   (incl. Generated)
-         2          0          0          1          4          0   (incl. Padding)
+         2          0          0          3          4          0   (incl. Padding)
 
     ----------------------------------------------------------------------
 
@@ -485,15 +488,15 @@ Image component sizes
 
       Code (inc. data)   RO Data    RW Data    ZI Data      Debug   
 
-      2900       1106         32         20      31028      13696   Grand Totals
-      2900       1106         32         20      31028      13696   ELF Image Totals
-      2900       1106         32         20          0          0   ROM Totals
+      2988       1134         32         28      31028      13830   Grand Totals
+      2988       1134         32         28      31028      13830   ELF Image Totals
+      2988       1134         32         28          0          0   ROM Totals
 
 ==============================================================================
 
-    Total RO  Size (Code + RO Data)                 2932 (   2.86kB)
-    Total RW  Size (RW Data + ZI Data)             31048 (  30.32kB)
-    Total ROM Size (Code + RO Data + RW Data)       2952 (   2.88kB)
+    Total RO  Size (Code + RO Data)                 3020 (   2.95kB)
+    Total RW  Size (RW Data + ZI Data)             31056 (  30.33kB)
+    Total ROM Size (Code + RO Data + RW Data)       3048 (   2.98kB)
 
 ==============================================================================
 

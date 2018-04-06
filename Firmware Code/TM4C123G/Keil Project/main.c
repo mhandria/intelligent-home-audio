@@ -313,21 +313,23 @@ void SysTick_Handler(void)
 	
 	ticksSinceLastRequest++;
 	writeDAC(readBuff()); // Update the DAC to match the current sample
-	if(getPtrDifference() < 20000 && ticksSinceLastRequest > 1200)
+	if(getPtrDifference() < 25000 && ticksSinceLastRequest > 1300)
 	{ // If we're running low on samples, request some more
 		UART1_SendChar('s');
 		ticksSinceLastRequest = 0;
 	}
 }
 
+unsigned int tickSinceLastComplain = 0;
 void writeBuff(unsigned char in)
 {
 	
 	if(sampleWritePtr == sampleReadPtr && arePtrsMisaligned)
 	{ // if the write pointer caught up to the read pointer, 
 		// then drop the sample
-		// UART0_SendString("Samples came in too fast");
-		// UART0_CRLF();
+		
+		UART0_SendString("Samples came in too fast");
+		UART0_CRLF();
 	}
 	else
 	{ // otherwise write to the buffer and update the pointer
@@ -355,15 +357,20 @@ unsigned char readBuff(void)
 	{ // if the read pointer caught up to the write pointer, 
 		// then play silence
 		
-		if(songPlaying)
+		if(songPlaying && tickSinceLastComplain > 10000)
 		{
+			tickSinceLastComplain = 0;
 			UART0_SendString("Samples came in too slow");
 			UART0_CRLF();
+		}
+		else if(songPlaying)
+		{
+			tickSinceLastComplain++;
 		}
 	}
 	else
 	{ // otherwise read the buffer and update the pointer
-			// songPlaying = true;
+			songPlaying = true;
 		
 			out = *sampleReadPtr;
 			

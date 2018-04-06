@@ -10,10 +10,10 @@ import time
 # constants
 SONG_CHUNK_SIZE = 1400
 UDP_songFileIndex = 0
-UDP_SOCKET = 0
+UDP_SOCKET = -1
 UDP_lastPercentage = 0
 UDP_SPKN = -1
-UDP_ADDR = 0
+UDP_MCU_ADDR = -1
 
 def sendSongChunk():
     global isSendingSong
@@ -24,7 +24,6 @@ def sendSongChunk():
     global UDP_SOCKET
     global UDP_lastPercentage
     global UDP_SPKN
-    global UDP_ADDR
 
     if(sharedMem.isSendingSong == False): #hang until a song needs to be sent
         UDP_songFileIndex   = 44 # reset the index for the next song file
@@ -76,7 +75,7 @@ def sendSongChunk():
             songChunk = songFile.read(songChunkSize)
 
             # send the chunk
-            UDP_SOCKET.sendto(songChunk,(UDP_ADDR, 14124))
+            UDP_SOCKET.sendto(songChunk,(UDP_MCU_ADDR))
 
             # update the index to point to the next chunk
             UDP_songFileIndex = UDP_songFileIndex + SONG_CHUNK_SIZE
@@ -94,50 +93,83 @@ def sendSongChunk():
     #endif
 #end sendSongChunk
 
-def Speaker_UDP_Client(udp_socket, spkn, addr):
+def Speaker_UDP_Client(spkn, addr, MCU_ADDR):
     # Initialize Memory
     global SONG_CHUNK_SIZE
     global UDP_songFileIndex
     global UDP_SOCKET
     global UDP_lastPercentage
     global UDP_SPKN
-    global UDP_ADDR
+    global UDP_MCU_ADDR
 
     SONG_CHUNK_SIZE = 1400
     UDP_songFileIndex = 44
+
+    # UDP Send Socket
+    UDP_MCU_ADDR = (addr[0],14124)
+    udp_socket = socket.socket(socket.AF_INET,socket.SOCK_DGRAM)
     UDP_SOCKET = udp_socket
+    
+    # UDP Listen Socket
+    UDP_listen_sock = socket.socket(socket.AF_INET,socket.SOCK_DGRAM)
+    UDP_listen_sock.bind(MCU_ADDR)
+    UDP_listen_sock.setblocking(0)
+
     UDP_lastPercentage = 0
     UDP_SPKN = spkn
-    UDP_ADDR = addr[0]
 
+    packet_address = -1
+
+    time.sleep(1)
     startTime = time.time()
 
+    # enter handle loop
     print("Speaker - UDP Socket #{0} connected for {1}...".format(spkn,addr))
     while(sharedMem.speakersConnected[spkn] == 1):
         try:
             # if a packet is recieved from the address this thread is responsible for, and it is the special character 's'
             # then send the next chunk in the song sequence back to the speaker embeded system
             
-            data, packet_address = udp_socket.recvfrom(1)
+            # TODO: see why silence plays instead of song
+            # ... this recieve throws lots of errors because the buffer
+            # is too small
+            try:
+                data, packet_address = UDP_listen_sock.recvfrom(1)
+                packet_address = packet_address[0]
+            except Exception as e:
+                data = ' '.encode('UTF-8')
+                if(type(e).__name__ != 'BlockingIOError'):
+                    print(e)
+                    time.sleep(2)
+                #endif
+            #endexcept
 
-            if(packet_address[0] == UDP_ADDR and data.decode() == 's'):
+            if(packet_address == addr[0] and data.decode() == 's'):
                 sendSongChunk()
-            elif(data.decode() == 'h'):
                 startTime = time.time() #reset the WDT
-            #endelif
+            elif(packet_address == addr[0] and data.decode() == 'h'):
+                startTime = time.time() #reset the WDT
+                # print('Doki Doki')
+            #endeif
 
             timeSinceLastHB = time.time() - startTime
-            if(timeSinceLastHB > 10):
+            # print('Time since last HB: '.format(timeSinceLastHB))
+            if(timeSinceLastHB > 5):
                 raise ValueError('WDT Expired')
+                time.sleep(3)
             #endif
 
+            data = ' '
+
         except Exception as e:
+            print(' ')
             print("Speaker - ERROR: UDP Client #{0}, ".format(spkn))
             print(e)
+            sharedMem.speakersConnected.update({spkn:0})
         #endexcept
     #endwhile
 
     udp_socket.close()
     sharedMem.speakersConnected.pop(spkn)
-    print("Speaker - UDP Client #{0} thread closed.".format(spkn))
+    print("Speaker - UDP Client #{0} thread closed".format(spkn))
 # end Speaker_UDP_Client

@@ -4,11 +4,12 @@
 import socket
 import sharedMem
 import os
+import time
 
 # global variables
 
 def returnMessage(payload, spkn, client):
-    print('Speaker - Client #{0} Response: {1}'.format(spkn,payload))
+    print('Speaker - TCP Client #{0} Response: {1}'.format(spkn,payload))
     client.send(payload.encode('utf-8'))
 #end returnMessage
 
@@ -20,27 +21,33 @@ def Speaker_Client(client, spkn, addr, self):
     print('')
     print("Speaker - TCP Client #{0} connected from {1}...".format(spkn,addr))
 
+    client.setblocking(0)
+
     #enter loop for handling client
     try:
-        while True:
-            #get phone payload data
-            data = client.recv(1)
-            data = data.decode('utf-8')
-            data = data.rstrip()
-            print('Speaker - Client #{0} Payload:  {1}'.format(spkn,data))
+        while(sharedMem.speakersConnected[spkn] == 1):
+            # get speaker payload data
+
+            try:
+                data = client.recv(1)
+                data = data.decode('utf-8')
+                data = data.rstrip()
+            except Exception as e:
+                data = ' '
+            #endexcept
             
             #interpret data and set return payload
             if(data == '?'):
+                print('Speaker - TCP Client #{0} Payload:  {1}'.format(spkn,data))
                 returnMessage('y', spkn, client)
-            else:
-                returnMessage('n', spkn, client)
-            #endelse
+            #endif
             
             # repeat forever
         #endwhile
     except Exception as e:
-        print('Speaker - Client #{0} disconnected'.format(spkn))
+        print('Speaker - TCP Client #{0} ERROR:'.format(spkn))
         print(e)
+        time.sleep(5)
     #endexcept
 
     # While loop breaks out only if there is a connection error
@@ -50,6 +57,7 @@ def Speaker_Client(client, spkn, addr, self):
 
     # send a udp packet to yourself to stop blocking 
     # the UDP thread so that it can exit
-    s = socket.socket(socket.AF_INET,socket.SOCK_DGRAM)
-    s.sendto('!'.encode(),(self, 14124))
+    # s = socket.socket(socket.AF_INET,socket.SOCK_DGRAM)
+    # s.sendto('!'.encode(),(self, 14124))
+    print('Speaker - TCP Client #{0} thread closed'.format(spkn))
 #endSpeaker_Client

@@ -21,7 +21,7 @@ const unsigned int MAX_CHUNK_SIZE = 4096; // The largest UDP packet we have buff
 const bool manualConnect = false;
 const bool writeManualConnectToEEPROM = false;
 const IPAddress IHA_SERVER(192,168,1,248);
-const unsigned int HB_DELAY_COUNT = 1000;
+const unsigned int HB_DELAY_COUNT = 20000;
 
 // Global Variables //
 bool debug_enable;
@@ -56,7 +56,7 @@ unsigned int HB_delay = 0;
 void loop()
 {
   ESP.wdtFeed();
-  
+
   // Pulse the heartbeat if it's time
   if(HB_delay >= HB_DELAY_COUNT)
   {
