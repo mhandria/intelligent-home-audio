@@ -93,7 +93,7 @@ def sendSongChunk():
     #endif
 #end sendSongChunk
 
-def Speaker_UDP_Client(spkn, addr, MCU_ADDR):
+def Speaker_UDP_Client(spkn, addr, MCU_ADDR, UDP_listen_sock):
     # Initialize Memory
     global SONG_CHUNK_SIZE
     global UDP_songFileIndex
@@ -109,15 +109,12 @@ def Speaker_UDP_Client(spkn, addr, MCU_ADDR):
     UDP_MCU_ADDR = (addr[0],14124)
     udp_socket = socket.socket(socket.AF_INET,socket.SOCK_DGRAM)
     UDP_SOCKET = udp_socket
-    
-    # UDP Listen Socket
-    UDP_listen_sock = socket.socket(socket.AF_INET,socket.SOCK_DGRAM)
-    UDP_listen_sock.bind(MCU_ADDR)
-    UDP_listen_sock.setblocking(0)
 
+    # Send song local static variables
     UDP_lastPercentage = 0
     UDP_SPKN = spkn
 
+    # address recieved from
     packet_address = -1
 
     time.sleep(1)

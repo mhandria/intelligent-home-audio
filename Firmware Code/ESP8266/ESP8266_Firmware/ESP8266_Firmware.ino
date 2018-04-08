@@ -90,7 +90,7 @@ void loop()
     // If we're disconnected try to reconnect forever
     clientReconnect(); 
   }
-  // TODO: Check if Wi-Fi disconnected, if so, reconnect and update MCU LED
+  // TODO: Check if Wi-Fi disconnected, if so, reconnect
 }
 
 //                          //

@@ -29,7 +29,7 @@ import sharedMem
 
 #Constants
 # HOST        = wlan0           #uncomment for tinkerboard (as well as above 2 statements)
-HOST        = '192.168.1.103' #uncomment for Blake's Desktop on his home network
+HOST        = '192.168.1.7' #uncomment for Blake's Desktop on his home network
 # HOST        = '192.168.1.103'  #uncomment for Blake's Laptop on mobile hotspot
 # HOST        = '192.168.1.131' #uncoment for Michael's Laptop.
 
@@ -53,6 +53,10 @@ tcp_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)  # tcp socket
 tcp_socket.bind(MCU_ADDR)        # Bind to the port
 tcp_socket.listen(5)             # Now wait for client connection
 
+UDP_listen_sock = socket.socket(socket.AF_INET,socket.SOCK_DGRAM)
+UDP_listen_sock.bind(MCU_ADDR)
+UDP_listen_sock.setblocking(0)
+
 print(' ')
 print('Server is listening for speaker clients...')
 
@@ -63,7 +67,8 @@ while True:
    tcp_thread = Thread(target=Speaker_Client,     args=(tcp_client, speakerNumber, addr, HOST))
    tcp_thread.start()
    
-   udp_thread = Thread(target=Speaker_UDP_Client, args=(speakerNumber, addr, MCU_ADDR))
+   # TODO make this just 1 thread instead of 1 for each client
+   udp_thread = Thread(target=Speaker_UDP_Client, args=(speakerNumber, addr, MCU_ADDR, UDP_listen_sock))
    udp_thread.start()
 
    speakerNumber = speakerNumber + 1
