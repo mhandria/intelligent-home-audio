@@ -11,14 +11,14 @@ import time
 SONG_CHUNK_SIZE = 1400
 UDP_lastPercentage = 0
 
-def sendSongChunk(client_addr):
+def sendSongChunk(client_spkn, client_addr):
     global SONG_CHUNK_SIZE
     global UDP_lastPercentage
     global isSendingSong
     global songFileIndex
-
-    # get a copy of the current song index
-    UDP_songFileIndex = sharedMem.songFileIndex
+    
+    # get a copy of the current song index for this speaker
+    UDP_songFileIndex = sharedMem.songFileIndexes[client_spkn]
     
     if(sharedMem.isSendingSong == True):
         try:
@@ -66,7 +66,7 @@ def sendSongChunk(client_addr):
 
             # update the index to point to the next chunk
             UDP_songFileIndex = UDP_songFileIndex + SONG_CHUNK_SIZE
-            sharedMem.songFileIndex = UDP_songFileIndex
+            sharedMem.songFileIndexes.update({client_spkn : UDP_songFileIndex})
 
         except Exception as e:
             print('Speaker - ERROR: Sending Song Chunk #{1}'.format(round((UDP_songFileIndex/SONG_CHUNK_SIZE))))
@@ -109,31 +109,42 @@ def Speaker_UDP_Client(UDP_listen_sock):
             except BlockingIOError:
                 # catch the exception thrown when there is no data in the buffer
                 data = ' '.encode('UTF-8')
+            except KeyError:
+                # catch the exception thrown when the TCP thread for the corresponding
+                # speaker has not yet been initalized
+                data = ' '.encode('UTF-8')
+                print('ERROR: Packet recieved from non-registered address')
+                time.sleep(1)
             #endexcept
 
             # Parse the input and execute the appropriate action #
 
             if(data.decode() == 's'):
-                sendSongChunk(client_addr)
-                sharedMem.speakerWDTs[client_addr] = time.time() #reset the WDT
+                sendSongChunk(client_spkn, client_addr)
+                sharedMem.speakerWDTs[client_spkn] = time.time() #reset the WDT
             elif(data.decode() == 'h'):
                 sharedMem.speakerWDTs[client_spkn] = time.time() #reset the WDT
             #endelse
 
             # Check if the any of the clients timed out #
-            if(bool(sharedMem.speakerWDTs)): # if the dict isn't empty
-                for k in list(sharedMem.aliveSpeakers):
-                    if(time.time() - sharedMem.speakerWDTs[k] > 5):
-                        sharedMem.aliveSpeakers.update({k:False})
-                        print('Speaker - UDP Client #{0} timed out.'.format(k))
-                    #endif
-                #endfor
-            #endif
+            try:
+                if(bool(sharedMem.speakerWDTs)): # if the dict isn't empty
+                    for k in list(sharedMem.aliveSpeakers):
+                        if(time.time() - sharedMem.speakerWDTs[k] > 5):
+                            sharedMem.aliveSpeakers.update({k:False})
+                            print('Speaker - UDP Client #{0} timed out.'.format(k))
+                        #endif
+                    #endfor
+                #endif
+            except KeyError:
+                print('Key Error checking WDTs')
+            #endecept
 
             data = ' ' # clear the data so it is not parsed multiple times
 
         except Exception as e:
             print('Speaker - ERROR: UDP Thread')
+            print(type(e).__name__)
             print(e)
         #endexcept
     #endwhile

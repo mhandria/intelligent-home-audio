@@ -15,6 +15,7 @@ from socketserver import ThreadingMixIn
 from Speaker_Client_Thread import Speaker_Client
 from Speaker_UDP_Client_Thread import Speaker_UDP_Client
 from Phone_Client_Thread import Phone_Client
+from SongSync_Thread import SongSync
 import sharedMem
 
 # Multithreaded server for demo 2
@@ -65,6 +66,9 @@ UDP_listen_sock.setblocking(0)
 udp_thread = Thread(target=Speaker_UDP_Client, args=(UDP_listen_sock,))
 udp_thread.start()
 
+songSync_thread = Thread(target=SongSync)
+songSync_thread.start()
+
 print('Speaker - Waiting for speaker clients...')
 
 speakerNumber = 0
@@ -75,6 +79,7 @@ while True:
    sharedMem.aliveSpeakers.update({speakerNumber : True})
    sharedMem.speakerAddresses.update({addr[0] : speakerNumber})
    sharedMem.speakerWDTs.update({speakerNumber : time.time() + 5})
+   sharedMem.songFileIndexes.update({speakerNumber : 44})
 
    # Start the TCP handler thread
    tcp_thread = Thread(target=Speaker_Client, args=(tcp_client, speakerNumber, addr))

@@ -4,6 +4,7 @@
 aliveSpeakers      = {} # {speakerNumber : isAlive}
 speakerAddresses   = {} # {'##.##.##.##' : speakerNumber}
 speakerWDTs        = {} # {speakerNumber : LastAliveTime}
+songFileIndexes    = {} # {speakerNumber : songFileIndex}
 isSendingSong = False
 songToSend = ' '
 songFileIndex = 44
@@ -13,6 +14,7 @@ def init():
     speakerWDTs      = {}
     aliveSpeakers    = {}
     speakerAddresses = {}
+    songFileIndexes  = {} # {speakerNumber : songFileIndex}
     isSendingSong = False
     songToSend = ' '
     songFileIndex = 44

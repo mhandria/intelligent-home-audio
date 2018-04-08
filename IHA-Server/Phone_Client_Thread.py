@@ -35,7 +35,6 @@ def playSong(fileName):
     # TODO: if the file already exists in temp, don't make another
     # TODO: if the number of files or filesize of /temp/ passes a 
     #       threshold, then start deleting files as you make more
-    # TODO: append silence to end of song so that it
     try:
         if(os.name == 'nt'): #if testing the server on windows
             libPath  = os.getcwd() + '/library/'
@@ -58,19 +57,23 @@ def playSong(fileName):
 
             # return sucessful message and continue listening for phone commands
             returnPayload = ACK+'Playing: ' + fileName
+
+            for k in list(sharedMem.songFileIndexes):
+                sharedMem.songFileIndexes[k] = 44
+            #endfor
+
+            # TODO: Make SongSync start here instead of server.py
+            #       then the thread can die when isSendingSong == false.
+            #       This function will have to clean up old SongSync threads
+            #       when starting a new song
+
         else: #if the file name doesn't exist
             returnPayload = NAK+'File "' + fileName + '" does not exist'
         #endelse
     except Exception as e:
         print('Phone - ERROR: Failed to play "' + fileName + '"')
         returnPayload = "ERROR: Playing " + fileName
-    #end except
-
-    # TODO: start a thread here called "songSync" which periodically takes the average sampleIndex
-    # of all of the speakers and re-assigns all sampleIndexes to that average.
-    # The sample indexes will have to be stored in a sharedMem dictionary
-    #
-    # the thread ends when sharedMem.isSendingSong == false
+    #end except 
 
     return returnPayload
 #end playSong
