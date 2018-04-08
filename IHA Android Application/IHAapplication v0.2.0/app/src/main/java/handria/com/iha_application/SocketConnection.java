@@ -231,8 +231,6 @@ public class SocketConnection extends AsyncTask<String, Void, String> {
         for(int i = 0; i < a.length; i++){
             newData[i] = a[i];
         }
-<<<<<<< HEAD
-=======
         newData[a.length] = '\n';
         for(int i = 0; i < b.length; i++){
             newData[i+a.length+1] = b[i];
@@ -268,7 +266,6 @@ public class SocketConnection extends AsyncTask<String, Void, String> {
             Log.e("getExternalHostName", "COULDN'T GET EXTERNAL HOST NAME::FATAL ERROR");
             return "";
         }
->>>>>>> fixed socket crash when there is no external ip found
     }
 
     @Override
