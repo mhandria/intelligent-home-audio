@@ -1,31 +1,56 @@
 package handria.com.iha_application;
 
+import android.content.Context;
+import android.net.ConnectivityManager;
+import android.net.NetworkInfo;
+import android.net.wifi.WifiInfo;
+import android.net.wifi.WifiManager;
 import android.os.AsyncTask;
+import android.text.format.Formatter;
 import android.util.Log;
+import android.view.Display;
 
 import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
+import java.lang.ref.WeakReference;
+import java.net.InetAddress;
+import java.net.NetworkInterface;
 import java.net.Socket;
+import java.net.UnknownHostException;
+import java.nio.channels.SocketChannel;
+import java.nio.file.Files;
+import java.util.ArrayList;
+import java.util.Enumeration;
+
+import static android.content.Context.MODE_PRIVATE;
+import static android.content.Context.WIFI_SERVICE;
 
 /**
  * Created by Handria on 2/27/18.
  */
 
-public class SocketConnection extends AsyncTask<String, Void, String> {
+public class SocketConnection extends AsyncTask<String, Void, String[]> {
 
     private onComplete then;
     WeakReference<Context> _mContextRef;
     private String fileName;
     private Socket _socket;
 
-    SocketConnection(onComplete then){
+    SocketConnection(onComplete then, Context _context){
         this.then = then;
+        _mContextRef = new WeakReference<>(_context);
+        fileName = "ip.src";
     }
 
     @Override
-    protected String doInBackground(String... params){
+    protected String[] doInBackground(String... params){
+        String[] info = {"", "", ""};
         try {
             int port = Integer.parseInt(params[0]);
             String msg = params[1];
@@ -77,19 +102,25 @@ public class SocketConnection extends AsyncTask<String, Void, String> {
             //send the commands to the server here.
             BufferedReader buffRead = new BufferedReader(new InputStreamReader(_socket.getInputStream()));
             PrintWriter out = new PrintWriter(_socket.getOutputStream(), true);
+
             out.println(msg);
             while(!buffRead.ready());
             String response = buffRead.readLine();
             _socket.close();
+<<<<<<< HEAD
             return response;
+=======
+            info[2] = response;
+            info[0] = hostNames[0];
+            info[1] = hostNames[1];
+>>>>>>> 38784779413cb074a39f87c81395e2be68c5be67
         }catch(IndexOutOfBoundsException iob){
-
             Log.e("CONNECTION", "not enough params...");
-            return "error something wrong with connection";
+            info[2] = "error something wrong with connection";
         }catch(IOException e){
 
             Log.e("CONNECTION", "failed to connect to socket");
-            return "failed to connect";
+            info[2] = "failed to connect";
         }catch(Exception e){
 
             Log.e("PARAMETER", "failed to grab param");
@@ -269,7 +300,7 @@ public class SocketConnection extends AsyncTask<String, Void, String> {
     }
 
     @Override
-    protected void onPostExecute(String status){
-        then.onConnectAttempt(status);
+    protected void onPostExecute(String[] info){
+        then.onConnectAttempt(info);
     }
 }

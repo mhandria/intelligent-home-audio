@@ -22,7 +22,6 @@ import java.util.ArrayList;
 
 public class HomePage extends AppCompatActivity implements onComplete{
 
-    String hostname;
     String port = "14123";
     ArrayList<String> songList;
     private  onComplete then;
