@@ -9,31 +9,18 @@ import time
 
 # constants
 SONG_CHUNK_SIZE = 1400
-UDP_songFileIndex = 0
-UDP_SOCKET = -1
 UDP_lastPercentage = 0
-UDP_SPKN = -1
-UDP_MCU_ADDR = -1
 
-def sendSongChunk():
-    global isSendingSong
-    global songToSend
-
+def sendSongChunk(client_addr):
     global SONG_CHUNK_SIZE
-    global UDP_songFileIndex
-    global UDP_SOCKET
     global UDP_lastPercentage
-    global UDP_SPKN
+    global isSendingSong
+    global songFileIndex
 
-    if(sharedMem.isSendingSong == False): #hang until a song needs to be sent
-        UDP_songFileIndex   = 44 # reset the index for the next song file
-        UDP_lastPercentage = 0
-    #endwhile
-
-    # if the TCP thread detected a disconnect,
-    # proceede to exit this thread
-    # otherwise send a chunk
-    if(sharedMem.speakersConnected[UDP_SPKN] == 1 and sharedMem.isSendingSong == True):
+    # get a copy of the current song index
+    UDP_songFileIndex = sharedMem.songFileIndex
+    
+    if(sharedMem.isSendingSong == True):
         try:
             # open the file
             if(os.name == 'nt'): #if windows
@@ -52,7 +39,6 @@ def sendSongChunk():
                 # the first speaker thread to reach end of file
                 # stops the file sending
                 sharedMem.isSendingSong = False
-                returnMessage('f') # return 'f' which means to chill out for a little
                 print('song ended')
                 return
             elif(bytesRemaining < SONG_CHUNK_SIZE):
@@ -75,98 +61,82 @@ def sendSongChunk():
             songChunk = songFile.read(songChunkSize)
 
             # send the chunk
-            UDP_SOCKET.sendto(songChunk,(UDP_MCU_ADDR))
+            s = socket.socket(socket.AF_INET,socket.SOCK_DGRAM)
+            s.sendto(songChunk,(client_addr,14124))
 
             # update the index to point to the next chunk
             UDP_songFileIndex = UDP_songFileIndex + SONG_CHUNK_SIZE
+            sharedMem.songFileIndex = UDP_songFileIndex
 
-            # print('Speaker - Client #{0} Sent Song Chunk #{1}'.format(spkn,round((songFileIndex/SONG_CHUNK_SIZE - 1))))
-            if(donePercent - UDP_lastPercentage > 1):
-                print('Song data {0}% sent'.format(round(donePercent)))
-                UDP_lastPercentage = donePercent
-            #endif
         except Exception as e:
-            print('Speaker - Client #{0} ERROR: Sending Song Chunk #{1}'.format(UDP_SPKN,round((UDP_songFileIndex/SONG_CHUNK_SIZE))))
+            print('Speaker - ERROR: Sending Song Chunk #{1}'.format(round((UDP_songFileIndex/SONG_CHUNK_SIZE))))
             print(e)
-        songFile.close()
         #endexcept
+
+        songFile.close()
     #endif
 #end sendSongChunk
 
-def Speaker_UDP_Client(spkn, addr, MCU_ADDR, UDP_listen_sock):
+def Speaker_UDP_Client(UDP_listen_sock):
     # Initialize Memory
     global SONG_CHUNK_SIZE
-    global UDP_songFileIndex
-    global UDP_SOCKET
     global UDP_lastPercentage
-    global UDP_SPKN
-    global UDP_MCU_ADDR
 
+    # global variables #
+    global aliveSpeakers
+    global speakerAddresses
+    global speakerWDTs
+    
     SONG_CHUNK_SIZE = 1400
-    UDP_songFileIndex = 44
-
-    # UDP Send Socket
-    UDP_MCU_ADDR = (addr[0],14124)
-    udp_socket = socket.socket(socket.AF_INET,socket.SOCK_DGRAM)
-    UDP_SOCKET = udp_socket
 
     # Send song local static variables
     UDP_lastPercentage = 0
-    UDP_SPKN = spkn
 
-    # address recieved from
-    packet_address = -1
-
-    time.sleep(1)
-    startTime = time.time()
+    # address that the UDP packet was recieved from
+    client_addr = -1
 
     # enter handle loop
-    print("Speaker - UDP Socket #{0} connected for {1}...".format(spkn,addr))
-    while(sharedMem.speakersConnected[spkn] == 1):
+    print('Speaker UDP Thread Started')
+    while(True):
         try:
-            # if a packet is recieved from the address this thread is responsible for, and it is the special character 's'
-            # then send the next chunk in the song sequence back to the speaker embeded system
-            
-            # TODO: see why silence plays instead of song
-            # ... this recieve throws lots of errors because the buffer
-            # is too small
+            # Check for any buffered UDP input #
             try:
-                data, packet_address = UDP_listen_sock.recvfrom(1)
-                packet_address = packet_address[0]
-            except Exception as e:
+                data, client_addr = UDP_listen_sock.recvfrom(1)
+                client_addr = client_addr[0]
+
+                # get the speaker number from address #
+                client_spkn = sharedMem.speakerAddresses[client_addr]
+            except BlockingIOError:
+                # catch the exception thrown when there is no data in the buffer
                 data = ' '.encode('UTF-8')
-                if(type(e).__name__ != 'BlockingIOError'):
-                    print(e)
-                    time.sleep(2)
-                #endif
             #endexcept
 
-            if(packet_address == addr[0] and data.decode() == 's'):
-                sendSongChunk()
-                startTime = time.time() #reset the WDT
-            elif(packet_address == addr[0] and data.decode() == 'h'):
-                startTime = time.time() #reset the WDT
-                # print('Doki Doki')
-            #endeif
+            # Parse the input and execute the appropriate action #
 
-            timeSinceLastHB = time.time() - startTime
-            # print('Time since last HB: '.format(timeSinceLastHB))
-            if(timeSinceLastHB > 5):
-                raise ValueError('WDT Expired')
-                time.sleep(3)
+            if(data.decode() == 's'):
+                sendSongChunk(client_addr)
+                sharedMem.speakerWDTs[client_addr] = time.time() #reset the WDT
+            elif(data.decode() == 'h'):
+                sharedMem.speakerWDTs[client_spkn] = time.time() #reset the WDT
+            #endelse
+
+            # Check if the any of the clients timed out #
+            if(bool(sharedMem.speakerWDTs)): # if the dict isn't empty
+                for k in list(sharedMem.aliveSpeakers):
+                    if(time.time() - sharedMem.speakerWDTs[k] > 5):
+                        sharedMem.aliveSpeakers.update({k:False})
+                        print('Speaker - UDP Client #{0} timed out.'.format(k))
+                    #endif
+                #endfor
             #endif
 
-            data = ' '
+            data = ' ' # clear the data so it is not parsed multiple times
 
         except Exception as e:
-            print(' ')
-            print("Speaker - ERROR: UDP Client #{0}, ".format(spkn))
+            print('Speaker - ERROR: UDP Thread')
             print(e)
-            sharedMem.speakersConnected.update({spkn:0})
         #endexcept
     #endwhile
 
     udp_socket.close()
-    sharedMem.speakersConnected.pop(spkn)
-    print("Speaker - UDP Client #{0} thread closed".format(spkn))
 # end Speaker_UDP_Client

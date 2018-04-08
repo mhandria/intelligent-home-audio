@@ -21,6 +21,11 @@ import sharedMem
 
 #startMain
 
+# global variables #
+global aliveSpeakers   
+global speakerAddresses
+global speakerWDTs  
+
 #Tinkerboard ip setup
 # get info for wlan0
 # ipaddrs = netifaces.ifaddresses('wlan0') # uncomment for tinkerboard
@@ -57,21 +62,24 @@ UDP_listen_sock = socket.socket(socket.AF_INET,socket.SOCK_DGRAM)
 UDP_listen_sock.bind(MCU_ADDR)
 UDP_listen_sock.setblocking(0)
 
-print(' ')
-print('Server is listening for speaker clients...')
+udp_thread = Thread(target=Speaker_UDP_Client, args=(UDP_listen_sock,))
+udp_thread.start()
+
+print('Speaker - Waiting for speaker clients...')
 
 speakerNumber = 0
 while True:
-   tcp_client, addr = tcp_socket.accept()     # Establish connection with client.
+   tcp_client, addr = tcp_socket.accept() # Establish connection with next client.
 
-   tcp_thread = Thread(target=Speaker_Client,     args=(tcp_client, speakerNumber, addr, HOST))
+   # add speaker to global lists
+   sharedMem.aliveSpeakers.update({speakerNumber : True})
+   sharedMem.speakerAddresses.update({addr[0] : speakerNumber})
+   sharedMem.speakerWDTs.update({speakerNumber : time.time() + 5})
+
+   # Start the TCP handler thread
+   tcp_thread = Thread(target=Speaker_Client, args=(tcp_client, speakerNumber, addr))
    tcp_thread.start()
    
-   # TODO make this just 1 thread instead of 1 for each client
-   udp_thread = Thread(target=Speaker_UDP_Client, args=(speakerNumber, addr, MCU_ADDR, UDP_listen_sock))
-   udp_thread.start()
-
+   # Increment the speakerNumber
    speakerNumber = speakerNumber + 1
 #endwhile
-
-tcp_socket.close()

@@ -13,10 +13,8 @@ def returnMessage(payload, spkn, client):
     client.send(payload.encode('utf-8'))
 #end returnMessage
 
-def Speaker_Client(client, spkn, addr, self):
+def Speaker_Client(client, spkn, addr):
     # initialize variables for this file
-
-    sharedMem.speakersConnected.update({spkn:1})
 
     print('')
     print("Speaker - TCP Client #{0} connected from {1}...".format(spkn,addr))
@@ -25,7 +23,7 @@ def Speaker_Client(client, spkn, addr, self):
 
     #enter loop for handling client
     try:
-        while(sharedMem.speakersConnected[spkn] == 1):
+        while(sharedMem.aliveSpeakers[spkn]):
             # get speaker payload data
 
             try:
@@ -47,17 +45,15 @@ def Speaker_Client(client, spkn, addr, self):
     except Exception as e:
         print('Speaker - TCP Client #{0} ERROR:'.format(spkn))
         print(e)
-        time.sleep(5)
     #endexcept
 
     # While loop breaks out only if there is a connection error
     client.close()
-    # this lets the UDP thread know that it can free the socket up again at this address
-    sharedMem.speakersConnected.update({spkn:0})
 
-    # send a udp packet to yourself to stop blocking 
-    # the UDP thread so that it can exit
-    # s = socket.socket(socket.AF_INET,socket.SOCK_DGRAM)
-    # s.sendto('!'.encode(),(self, 14124))
+    # Remove client from global lists
+    sharedMem.aliveSpeakers.pop(spkn)
+    sharedMem.speakerAddresses.pop(addr[0])
+    sharedMem.speakerWDTs.pop(spkn)
+
     print('Speaker - TCP Client #{0} thread closed'.format(spkn))
 #endSpeaker_Client

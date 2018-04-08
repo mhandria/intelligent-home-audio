@@ -54,6 +54,7 @@ def playSong(fileName):
             # set memory to initiate song sending
             sharedMem.isSendingSong = True
             sharedMem.songToSend = fileName + '.wav'
+            sharedMem.songFileIndex = 44 # TODO: Change this when ogg vorbis is implemented
 
             # return sucessful message and continue listening for phone commands
             returnPayload = ACK+'Playing: ' + fileName
@@ -161,9 +162,7 @@ def Phone_Client(ADDR):
             print('Phone - ERROR: while creating socket')
 
         #listen until phone opens socket to server
-
-        print(' ')
-        print('Phone - Waiting for phone connection...')
+        print('Phone - Waiting for TCP phone client...')
         
         try:
             phone_client_sock, addr = server_sock.accept()

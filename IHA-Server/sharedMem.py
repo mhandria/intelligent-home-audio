@@ -1,12 +1,18 @@
 #!/usr/bin/env python3
 
 #file storing global variable names to be used by different threads
+aliveSpeakers      = {} # {speakerNumber : isAlive}
+speakerAddresses   = {} # {'##.##.##.##' : speakerNumber}
+speakerWDTs        = {} # {speakerNumber : LastAliveTime}
 isSendingSong = False
 songToSend = ' '
-speakersConnected = { 'a': 0 }
+songFileIndex = 44
 
 # starting values of global variables
 def init():
-    speakersConnected = { 'a': 0 }
+    speakerWDTs      = {}
+    aliveSpeakers    = {}
+    speakerAddresses = {}
     isSendingSong = False
     songToSend = ' '
+    songFileIndex = 44
