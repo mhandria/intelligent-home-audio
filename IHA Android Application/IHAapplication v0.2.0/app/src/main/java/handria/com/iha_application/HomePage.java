@@ -1,5 +1,6 @@
 package handria.com.iha_application;
 
+import android.content.Context;
 import android.content.Intent;
 import android.graphics.Color;
 import android.os.AsyncTask;
@@ -17,6 +18,9 @@ import android.widget.TableRow;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.nio.channels.SocketChannel;
 import java.util.ArrayList;
 
@@ -25,6 +29,7 @@ public class HomePage extends AppCompatActivity implements onComplete{
     String port = "14123";
     ArrayList<String> songList;
     private  onComplete then;
+    String[] hostNames = new String[2];
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -44,22 +49,38 @@ public class HomePage extends AppCompatActivity implements onComplete{
         layout.setBackgroundColor(Color.argb(255, 198, 199, 201));
         ProgressBar loadingSign = (ProgressBar) findViewById(R.id.isLoading);
         loadingSign.animate();
+
+
         SocketConnection _connection = new SocketConnection(then, this);
-        _connection.executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR, port, "stat", "true");
+        hostNames = extractIp();
+        if(hostNames[0].equals("INVALID") && hostNames[1].equals("INVALID")){
+            _connection.executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR, "false", port, "stat");
+        }else{
+            _connection.executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR, "true", port, "stat", hostNames[0], hostNames[1]);
+        }
     }
 
 
     @Override
-    public void onConnectAttempt(String[] info){
+    public void onConnectAttempt(String[] res){
+        //update the ui to stop the circle loading bar.
         FrameLayout layout = (FrameLayout) findViewById(R.id.layover);
         layout.setBackgroundColor(Color.TRANSPARENT);
         ProgressBar loadingSign = (ProgressBar) findViewById(R.id.isLoading);
         loadingSign.setVisibility(View.INVISIBLE);
         TextView ipName = (TextView) findViewById(R.id.ipName);
         TextView exIpName = (TextView) findViewById(R.id.exIpName);
-        ipName.setText("Local IP NAME: "+info[0]);
-        exIpName.setText("External IP NAME: "+info[1]);
-        Toast.makeText(this, info[2], Toast.LENGTH_SHORT).show();
+
+
+        //change UI display of Local IP Name & External Ip Name
+        //toast the response gotten from the socket cmd.
+        ipName.setText("Local IP NAME: "+res[0]);
+        exIpName.setText("External IP NAME: "+res[1]);
+        Toast.makeText(this, res[2], Toast.LENGTH_SHORT).show();
+
+        //update and save the new hostNames
+        hostNames = new String[] {res[0], res[1]};
+        saveIp(res[0], res[1]);
     }
 
     @Override
@@ -97,7 +118,7 @@ public class HomePage extends AppCompatActivity implements onComplete{
                     loadingSign.setVisibility(View.VISIBLE);
                     loadingSign.animate();
                     SocketConnection _connection = new SocketConnection(then, view.getContext());
-                    _connection.executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR, port, "play "+title, "true");
+                    _connection.executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR, "true", port, "play "+title, hostNames[0], hostNames[1]);
                 }
             });
             tableView.addView(row);
@@ -108,6 +129,93 @@ public class HomePage extends AppCompatActivity implements onComplete{
 
     public void goCustom(View view) {
         Intent testPage = new Intent(this, TestPage.class);
+        if(hostNames[0].equals("") && hostNames[1].equals("")) return;
+        testPage.putExtra("localHost", hostNames[0]);
+        testPage.putExtra("externalHost", hostNames[1]);
         startActivity(testPage);
+    }
+
+    /**
+     * this function will save the ip and external ip names to
+     * an internal file on the contex's directory.
+     *
+     * @param ip - the ip given to the server being connected to
+     * @param exIp - the router's port 14123 forwarded ip name.
+     */
+    private void saveIp(String ip, String exIp){
+        try{
+            Context _context = this;
+            FileOutputStream _out = _context.openFileOutput("ip.src", Context.MODE_PRIVATE);
+            byte[] ipData = combineArray(ip.getBytes(), exIp.getBytes());
+            _out.write(ipData);
+            _out.close();
+        }catch(Exception e){
+            Log.e("SAVE IP", e.toString());
+            createNewFile(ip, exIp);
+        }
+    }
+
+    /**
+     * This function will
+     * 1) create a new file to save ip data strings into
+     * 2) save the ip data strings (ip and exIp) to the file.
+     *
+     * @param ip - the ip given to the server being connected to
+     * @param exIp - the router's port 14123 forwarded ip name.
+     */
+    private void createNewFile(String ip, String exIp){
+        try{
+            Context _context = this;
+            File directory = _context.getFilesDir();
+            File file = new File(directory, "ip.src");
+            file.setWritable(true);
+            FileOutputStream _out = _context.openFileOutput("ip.src", Context.MODE_PRIVATE);
+            byte[] ipData = combineArray(ip.getBytes(), exIp.getBytes());
+            _out.write(ipData);
+            _out.close();
+        }catch(Exception e){
+            Log.e("WRITE FILE", e.toString());
+        }
+    }
+
+    /**
+     * extract the ip names stored inside the application context.
+     * @return  String[] - local ip address, external ip address, (respectively)
+     */
+    private String[] extractIp(){
+        StringBuilder ipName = new StringBuilder();
+        StringBuilder externalIpName = new StringBuilder();
+        try{
+            Context _context = this;
+            FileInputStream _in = _context.openFileInput("ip.src");
+
+            while(true) {
+                int data = _in.read();
+                if(data != '\n' && data != -1) ipName.append((char) data);
+                else break;
+            }
+            while(true){
+                int data = _in.read();
+                if(data != -1) externalIpName.append((char) data);
+                else break;
+            }
+            String[] names = {ipName.toString(), externalIpName.toString()};
+            return names;
+        }catch(Exception e){
+            String[] names = {"INVALID", "INVALID"};
+            return names;
+        }
+    }
+
+    private byte[] combineArray(byte[] a, byte[] b){
+        byte[] newData = new byte[a.length+b.length+1];
+        for(int i = 0; i < a.length; i++){
+            newData[i] = a[i];
+        }
+        newData[a.length] = '\n';
+        for(int i = 0; i < b.length; i++){
+            newData[i+a.length+1] = b[i];
+        }
+        return newData;
     }
 }
