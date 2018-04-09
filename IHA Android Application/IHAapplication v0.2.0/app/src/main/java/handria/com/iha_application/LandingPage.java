@@ -17,7 +17,8 @@ public class LandingPage extends AppCompatActivity {
     }
 
     public void signIn(View view) {
-        userChoice= new Intent(this, SignIn.class);
+        //userChoice= new Intent(this, SignIn.class);
+        userChoice= new Intent(this, HomePage.class);
         startActivity(userChoice);
     }
 

@@ -29,9 +29,10 @@ import sharedMem
 
 #Constants
 # HOST        = wlan0           #uncomment for tinkerboard (as well as above 2 statements)
-HOST        = '192.168.1.103' #uncomment for Blake's Desktop on his home network
+# HOST        = '192.168.1.103' #uncomment for Blake's Desktop on his home network
 # HOST        = '192.168.1.17'  #uncomment for Blake's Laptop on mobile hotspot
 # HOST        = '192.168.1.131' #uncoment for Michael's Laptop.
+
 
 PHONE_PORT  = 14123
 MCU_PORT    = 14124
@@ -65,7 +66,7 @@ while True:
 
    tcp_thread = Thread(target=Speaker_Client,     args=(tcp_client, speakerNumber, addr, HOST))
    tcp_thread.start()
-   
+
    #udp_thread = Thread(target=Speaker_UDP_Client, args=(udp_socket, speakerNumber, addr))
    #udp_thread.start()
 
