@@ -5,6 +5,7 @@
 import socket
 import sharedMem
 import os
+import platform
 import time
 
 # constants
@@ -15,18 +16,20 @@ def sendSongChunk(client_spkn, client_addr):
     global SONG_CHUNK_SIZE
     global UDP_lastPercentage
     global isSendingSong
-    
+
     # get a copy of the current song index for this speaker
     UDP_songFileIndex = sharedMem.songFileIndexes[client_spkn]
-    
+
     if(sharedMem.isSendingSong == True):
         try:
             # open the file
             if(os.name == 'nt'): #if windows
                 songFile = open(os.getcwd() + '/temp/' + sharedMem.songToSend, 'rb')
+            elif(platform.system() == 'Darwin'):
+                songFile = open(os.getcwd() + '/temp/'+sharedMem.songToSend, 'rb')
             else: #else it's debian
                 songFile = open('/home/linaro/Desktop/temp/' + sharedMem.songToSend, 'rb')
-            
+
             # get the bytes remaining in the file
             songFile.seek(0, 2)
             fileSize = songFile.tell()
@@ -85,7 +88,7 @@ def Speaker_UDP_Client(UDP_listen_sock):
     global aliveSpeakers
     global speakerAddresses
     global speakerWDTs
-    
+
     SONG_CHUNK_SIZE = 1400
 
     # Send song local static variables

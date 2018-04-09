@@ -23,9 +23,9 @@ import sharedMem
 #startMain
 
 # global variables #
-global aliveSpeakers   
+global aliveSpeakers
 global speakerAddresses
-global speakerWDTs  
+global speakerWDTs
 
 #Tinkerboard ip setup
 # get info for wlan0
@@ -35,7 +35,7 @@ global speakerWDTs
 
 #Constants
 # HOST        = wlan0           #uncomment for tinkerboard (as well as above 2 statements)
-HOST        = '192.168.1.7' #uncomment for Blake's Desktop on his home network
+# HOST        = '192.168.1.7' #uncomment for Blake's Desktop on his home network
 # HOST        = '192.168.1.103'  #uncomment for Blake's Laptop on mobile hotspot
 # HOST        = '192.168.1.131' #uncoment for Michael's Laptop.
 
@@ -84,7 +84,7 @@ while True:
    # Start the TCP handler thread
    tcp_thread = Thread(target=Speaker_Client, args=(tcp_client, speakerNumber, addr))
    tcp_thread.start()
-   
+
    # Increment the speakerNumber
    speakerNumber = speakerNumber + 1
 #endwhile

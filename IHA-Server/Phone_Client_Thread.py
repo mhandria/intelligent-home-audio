@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
-# Thread for listening for mobile application commands 
+# Thread for listening for mobile application commands
 import socket
-from threading import Thread 
+from threading import Thread
 from socketserver import ThreadingMixIn
 import sharedMem
 import requests
 import os
+import platform
 from mutagen.easyid3 import EasyID3 as ID3
 
 # Constants #
@@ -37,7 +38,7 @@ def playSong(fileName):
     global PHONE_isSongPaused
 
     # TODO: if the file already exists in temp, don't make another
-    # TODO: if the number of files or filesize of /temp/ passes a 
+    # TODO: if the number of files or filesize of /temp/ passes a
     #       threshold, then start deleting files as you make more
     try:
         PHONE_isSongPaused = False
@@ -79,7 +80,7 @@ def playSong(fileName):
     except Exception as e:
         print('Phone - ERROR: Failed to play "' + fileName + '"')
         returnPayload = "ERROR: Playing " + fileName
-    #end except 
+    #end except
 
     return returnPayload
 #end playSong
@@ -160,6 +161,8 @@ def getSongList(client):
 
     if(os.name == 'nt'): # if windows
         filepath = os.getcwd() + '/library/'
+    elif(platform.system() == 'Debian'):
+        filepath = os.getcwd() + '/library'
     else: #otherwise debian server
         filepath = '/home/linaro/Desktop/library/'
 
@@ -172,7 +175,7 @@ def getSongList(client):
         payload = ACK
         client.send(payload.encode('utf-8'))
 
-        tags = ['title', 'artist', 'album'] 
+        tags = ['title', 'artist', 'album']
         mf = None
         for f in files:
             try:
@@ -198,15 +201,15 @@ def getSongList(client):
                         payload = payload + NUL
                     #endexcept
                 #endfor
-    
+
             else:
                 payload = f
                 for t in tags: payload = payload + NUL + US
             #endelse
-            
+
             # group seperator to show end of current song
             payload = payload + GS
-            
+
             #send the payload, move to next song
             print(payload)
             client.send(payload.encode('utf-8'))
@@ -214,7 +217,7 @@ def getSongList(client):
 
         returnPayload = EOT
     #endelse
-    return returnPayload    
+    return returnPayload
 #end getSongList
 
 # Main #
@@ -235,7 +238,7 @@ def Phone_Client(ADDR):
         #listen until phone opens socket to server
         print(' ')
         print('Phone - Waiting for TCP phone client...')
-        
+
         try:
             phone_client_sock, addr = server_sock.accept()
         except Exception as e:
@@ -243,7 +246,7 @@ def Phone_Client(ADDR):
         #endexcept
 
         print("Phone - Connected from {0}...".format(addr))
-        
+
         try:
             #get phone payload data
             data = phone_client_sock.recv(BUFFER_SIZE)
@@ -281,7 +284,7 @@ def Phone_Client(ADDR):
         except Exception as e:
             print('Phone - ERROR: Unexpectedly disconnected. Trying again...')
             print(e)
-        
+
         phone_client_sock.close() # close the socket and do it again
         # repeat forever
     #endwhile
