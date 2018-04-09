@@ -220,6 +220,40 @@ def getSongList(client):
     return returnPayload
 #end getSongList
 
+def getSpeakerVolume():
+    try:
+        returnPayload = ACK + str(round(sharedMem.speakerVolume * 100))
+    except Exception as e:
+        print('Phone - ERROR: getSpeakerVolume')
+        print(e)
+        returnPayload = NAK
+    #endexcept
+
+    return returnPayload
+#end getSpeakerVolume
+
+def setSpeakerVolume(volume):
+    global speakerVolume
+
+    try:
+        volume = int(volume)
+        if(volume >= 0 and volume <= 100):
+            sharedMem.speakerVolume = volume/100.0
+            returnPayload = ACK
+        else:
+            returnPayload = NAK + 'Invalid volume'
+        #endelse
+    except ValueError:
+        returnPayload = NAK + 'Invalid volume'
+    except Exception as e:
+        print('Phone - ERROR: setSpeakerVolume')
+        print(e)
+        returnPayload = NAK
+    #endexcept
+
+    return returnPayload
+#end getSpeakerVolume
+
 # Main #
 def Phone_Client(ADDR):
     print('')
@@ -273,6 +307,11 @@ def Phone_Client(ADDR):
                 payload = getSpeakerList(phone_client_sock)
             elif(data == 'getSongList'):
                 payload = getSongList(phone_client_sock)
+            elif(data == 'getSpeakerVolume'):
+                payload = getSpeakerVolume()
+            elif(data.startswith('setSpeakerVolume ')):
+                volume = data.split(' ',1)[1]
+                payload = setSpeakerVolume(volume)
             else:
                 payload = NAK+'Invalid Command'
             #endelse

@@ -7,7 +7,7 @@ speakerWDTs        = {} # {speakerNumber : LastAliveTime}
 songFileIndexes    = {} # {speakerNumber : songFileIndex}
 speakerEnables     = {} # {speakerNumber : isEnabled}
 speakerEnumeration = {} # {'##.##.##.##' : speakerEnumeration}
-speakerVolume      = 0
+speakerVolume      = 1  # 0.0 - 1.0
 isSendingSong = False
 songToSend = ' '
 songFileIndex = 44
@@ -20,6 +20,7 @@ def init():
     songFileIndexes    = {}
     speakerEnables     = {}
     speakerEnumeration = {}
+    speakerVolume      = 0.0 
     isSendingSong = False
     songToSend = ' '
     songFileIndex = 44

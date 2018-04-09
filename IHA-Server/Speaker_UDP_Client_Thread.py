@@ -5,6 +5,7 @@
 import socket
 import sharedMem
 import os
+import sys
 import platform
 import time
 
@@ -16,17 +17,17 @@ def sendSongChunk(client_spkn, client_addr):
     global SONG_CHUNK_SIZE
     global UDP_lastPercentage
     global isSendingSong
+    
+    try:
+        # get a copy of the current song index for this speaker
+        UDP_songFileIndex = sharedMem.songFileIndexes[client_spkn]
 
-    # get a copy of the current song index for this speaker
-    UDP_songFileIndex = sharedMem.songFileIndexes[client_spkn]
-
-    if(sharedMem.isSendingSong == True):
-        try:
+        if(sharedMem.isSendingSong == True):
             # open the file
             if(os.name == 'nt'): #if windows
                 songFile = open(os.getcwd() + '/temp/' + sharedMem.songToSend, 'rb')
             elif(platform.system() == 'Darwin'):
-                songFile = open(os.getcwd() + '/temp/'+sharedMem.songToSend, 'rb')
+                songFile = open(os.getcwd() + '/temp/' + sharedMem.songToSend, 'rb')
             else: #else it's debian
                 songFile = open('/home/linaro/Desktop/temp/' + sharedMem.songToSend, 'rb')
 
@@ -44,7 +45,7 @@ def sendSongChunk(client_spkn, client_addr):
                 print('song ended')
                 return
             elif(bytesRemaining < SONG_CHUNK_SIZE):
-                # if there is less than 1 cunk left
+                # if there is less than 1 chunk left
                 # the index is the bytes remaining
 
                 songChunkSize = bytesRemaining
@@ -62,21 +63,28 @@ def sendSongChunk(client_spkn, client_addr):
             songFile.seek(UDP_songFileIndex,0) # seek to the chunk to send
             songChunk = songFile.read(songChunkSize)
 
+            # apply volume modifier #
+            songChunkAdjusted = bytes()
+            for i in range(0,len(songChunk)):
+                songChunkAdjusted +=  bytes([int(((float(songChunk[i]) - 128)*sharedMem.speakerVolume) + 128)])
+            #endfor
+
             # send the chunk
             s = socket.socket(socket.AF_INET,socket.SOCK_DGRAM)
-            s.sendto(songChunk,(client_addr,14124))
+            s.sendto(songChunkAdjusted,(client_addr,14124))
 
             # update the index to point to the next chunk
             UDP_songFileIndex = UDP_songFileIndex + SONG_CHUNK_SIZE
             sharedMem.songFileIndexes.update({client_spkn : UDP_songFileIndex})
 
-        except Exception as e:
-            print('Speaker - ERROR: Sending Song Chunk #{1}'.format(round((UDP_songFileIndex/SONG_CHUNK_SIZE))))
-            print(e)
-        #endexcept
-
-        songFile.close()
-    #endif
+            songFile.close()
+        #endif
+    except Exception as e:
+        print('Speaker - ERROR: Sending Song Chunk #{0}'.format(round((UDP_songFileIndex/SONG_CHUNK_SIZE))))
+        print('Error on line {}'.format(sys.exc_info()[-1].tb_lineno))
+        print(type(e).__name__)
+        print(e)
+    #endexcept
 #end sendSongChunk
 
 def Speaker_UDP_Client(UDP_listen_sock):
@@ -149,8 +157,10 @@ def Speaker_UDP_Client(UDP_listen_sock):
 
         except Exception as e:
             print('Speaker - ERROR: UDP Thread')
+            print('Error on line {}'.format(sys.exc_info()[-1].tb_lineno))
             print(type(e).__name__)
             print(e)
+            time.sleep(5)
         #endexcept
     #endwhile
 
