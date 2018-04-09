@@ -52,7 +52,6 @@ def Speaker_Client(client, spkn, addr):
 
     # Remove client from global lists
     sharedMem.aliveSpeakers.pop(spkn)
-    sharedMem.speakerAddresses.pop(addr[0])
     sharedMem.speakerWDTs.pop(spkn)
 
     print('Speaker - TCP Client #{0} thread closed'.format(spkn))

@@ -6,6 +6,7 @@ from socketserver import ThreadingMixIn
 import sharedMem
 import requests
 import os
+import sys
 import platform
 from mutagen.easyid3 import EasyID3 as ID3
 
@@ -145,16 +146,112 @@ def isSendingSong():
     return returnPayload
 #end isSendingSong
 
-def getSpeakerList(phone_client_sock):
+def getSpeakerList(client):
     try:
-        returnPayload = NAK + 'Not yet implemented'
+        if(not sharedMem.speakerEnumeration): # if empty
+            returnPayload = NAK  + 'No speakers yet'
+        else:
+            payload = ACK
+            client.send(payload.encode('utf-8'))
+
+            for n in list(sharedMem.speakerEnumeration.keys()):
+                spkr_addr   = sharedMem.speakerEnumeration[n]
+                spkr_number = sharedMem.speakerAddresses[spkr_addr]
+
+                if spkr_number in sharedMem.aliveSpeakers.keys():
+                    isConnected = 'y'
+                else:
+                    isConnected = 'n'
+                #endelse
+                
+                payload = str(n) + US + isConnected + GS
+                print(payload)
+                client.send(payload.encode('utf-8'))
+            #endfor
+
+            returnPayload = EOT
+        #endelse
     except Exception as e:
         print('Phone - ERROR: getSpeakerList')
+        print(e)
         returnPayload = NAK
     #endexcept
 
     return returnPayload
 #end getSpeakerList
+
+def isSpeakerEnabled(spkr_enum):
+    try:
+        if spkr_enum in list(sharedMem.speakerEnumeration.keys()):
+            spkr_addr = sharedMem.speakerEnumeration[spkr_enum]
+            spkr_num  = sharedMem.speakerAddresses[spkr_addr]
+            if(sharedMem.speakerEnables[spkr_num]):
+                returnPayload = ACK + 'y'
+            else:
+                returnPayload = ACK + 'n'
+            #endelse
+        else:
+            returnPayload = NAK + 'Invalid speaker enumerator: "' + str(spkr_enum) + '"'
+        #endelse
+    except Exception as e:
+        print('Phone - ERROR: isSpeakerEnabled')
+        print(e)
+        returnPayload = NAK
+    #endexcept
+
+    return returnPayload
+
+#end isSpeakerEnabled
+
+def enableSpeaker(spkr_enum):
+    global speakerEnables
+    global speakerEnumeration
+    global speakerAddresses
+
+    try:
+        if spkr_enum in list(sharedMem.speakerEnumeration.keys()):
+            spkr_addr = sharedMem.speakerEnumeration[spkr_enum]
+            spkr_num = sharedMem.speakerAddresses[spkr_addr]
+            sharedMem.speakerEnables.update({spkr_num : True})
+            returnPayload = ACK
+        else:
+            returnPayload = NAK + 'Invalid speaker enumerator: "' + str(spkr_enum) + '"'
+        #endelse
+
+    except Exception as e:
+        print('Phone - ERROR: enableSpeaker')
+        print('Error on line {}'.format(sys.exc_info()[-1].tb_lineno))
+        print(e)
+        returnPayload = NAK
+    #endexcept
+
+    return returnPayload
+#end enableSpeaker
+
+def disableSpeaker(spkr_enum):
+    global speakerEnables
+    global speakerEnumeration
+    global speakerAddresses
+    
+    try:
+        if spkr_enum in list(sharedMem.speakerEnumeration.keys()):
+            spkr_addr = sharedMem.speakerEnumeration[spkr_enum]
+            spkr_num = sharedMem.speakerAddresses[spkr_addr]
+            sharedMem.speakerEnables.update({spkr_num : False})
+            returnPayload = ACK
+        else:
+            returnPayload = NAK + 'Invalid speaker enumerator: "' + str(spkr_enum) + '"'
+        #endelse
+
+    except Exception as e:
+        print('Phone - ERROR: disableSpeaker')
+        print('Error on line {}'.format(sys.exc_info()[-1].tb_lineno))
+        print(e)
+        returnPayload = NAK
+    #endexcept
+
+    return returnPayload
+#end enableSpeaker
 
 def getSongList(client):
     print('Phone - Sending song list...')
@@ -189,10 +286,8 @@ def getSongList(client):
             if(validID3):
                 # add filename to payload
                 payload = f
-
                 for t in tags:
                     payload = payload + US # mark new attribute by unit seperator
-
                     try:
                         # add tag to payload if it exists
                         payload = payload + mf[t][0]
@@ -201,7 +296,6 @@ def getSongList(client):
                         payload = payload + NUL
                     #endexcept
                 #endfor
-
             else:
                 payload = f
                 for t in tags: payload = payload + NUL + US
@@ -295,7 +389,7 @@ def Phone_Client(ADDR):
             elif(data == 'getExtIP'):
                 payload = getExtIP()
             elif(data.startswith('play ')):
-                songName = data.split(' ',1)[1] #parse fileName
+                songName = data.split(' ',1)[1] #parse <fileName>
                 payload  = playSong(songName)
             elif(data == 'pause'):
                 payload = pauseSong()
@@ -305,23 +399,41 @@ def Phone_Client(ADDR):
                 payload = isSendingSong()
             elif(data == 'getSpeakerList'):
                 payload = getSpeakerList(phone_client_sock)
+            elif(data.startswith('isSpeakerEnabled ')):
+                speakerEnum = data.split(' ',1)[1] #parse <speakerNumber>
+                speakerEnum =  int(speakerEnum)
+                payload = isSpeakerEnabled(speakerEnum)
+            elif(data.startswith('enableSpeaker ')):
+                speakerEnum = data.split(' ',1)[1] #parse <speakerNumber>
+                speakerEnum =  int(speakerEnum)
+                payload = enableSpeaker(speakerEnum)
+            elif(data.startswith('disableSpeaker ')):
+                speakerEnum = data.split(' ',1)[1] #parse <speakerNumber>
+                speakerEnum =  int(speakerEnum)
+                payload = disableSpeaker(speakerEnum)
             elif(data == 'getSongList'):
                 payload = getSongList(phone_client_sock)
             elif(data == 'getSpeakerVolume'):
                 payload = getSpeakerVolume()
             elif(data.startswith('setSpeakerVolume ')):
-                volume = data.split(' ',1)[1]
+                volume = data.split(' ',1)[1] # parse <volume>
                 payload = setSpeakerVolume(volume)
             else:
-                payload = NAK+'Invalid Command'
+                payload = NAK+'Invalid Command: "' + data + '"'
             #endelse
 
             print('Phone - Response: {0}'.format(payload))
 
             #send return message
             phone_client_sock.send(payload.encode('utf-8'))
+        except ValueError:
+            print('Phone - ERROR: ValueError')
+            print('Error on line {}'.format(sys.exc_info()[-1].tb_lineno))
+            phone_client_sock.send(NAK.encode('utf-8'))
         except Exception as e:
             print('Phone - ERROR: Unexpectedly disconnected. Trying again...')
+            print('Error on line {}'.format(sys.exc_info()[-1].tb_lineno))
+            print(type(e).__name__)
             print(e)
 
         phone_client_sock.close() # close the socket and do it again

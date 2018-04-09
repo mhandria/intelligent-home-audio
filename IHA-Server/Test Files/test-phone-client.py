@@ -4,6 +4,7 @@ import os
 from socket import*
 import socket
 import ipaddress as ip
+import sys
 
 host = input('input server address: ')
 PORT = 14123
@@ -17,13 +18,12 @@ NAK = 21
 GS  = 29
 US  = 31
 
-logfile = open('test-phone-client.log','w')
-logfile.close()
-
 while True:
     try:
         print('')
-        payload = input("Payload: ")
+        payload = ''
+        while not payload:
+            payload = input("Payload: ")
 
         #send payload
         client_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -38,10 +38,13 @@ while True:
                 data = client_sock.recv(BUFSIZ)
                 data = data.decode('utf-8')
                 print(data)
-                logfile = open('test-phone-client.log','a')
-                logfile.write(data)
-                logfile.write('\n')
-                logfile.close()
+            #endwhile
+        elif(payload == 'getSpeakerList'):
+            data = ' '
+            while(ord(data[0]) != EOT):
+                data = client_sock.recv(BUFSIZ)
+                data = data.decode('utf-8')
+                print(data)
             #endwhile
         else:
             data = client_sock.recv(BUFSIZ)
@@ -71,7 +74,7 @@ while True:
         client_sock.close()
         print("Socket closed.")
     except Exception as e:
-        print('ERROR:')
+        print('Error on line {}'.format(sys.exc_info()[-1].tb_lineno))
         print(e)
     #endexcept
 #endwhile

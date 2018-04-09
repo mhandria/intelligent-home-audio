@@ -17,12 +17,14 @@ def sendSongChunk(client_spkn, client_addr):
     global SONG_CHUNK_SIZE
     global UDP_lastPercentage
     global isSendingSong
+    global speakerEnables
     
     try:
         # get a copy of the current song index for this speaker
         UDP_songFileIndex = sharedMem.songFileIndexes[client_spkn]
 
-        if(sharedMem.isSendingSong == True):
+        # send the song if the server is sending a song AND this speaker is enabled
+        if(sharedMem.isSendingSong == True and sharedMem.speakerEnables[client_spkn]):
             # open the file
             if(os.name == 'nt'): #if windows
                 songFile = open(os.getcwd() + '/temp/' + sharedMem.songToSend, 'rb')
