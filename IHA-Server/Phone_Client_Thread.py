@@ -17,6 +17,9 @@ NAK = '\x15'
 GS  = '\x1D'
 US  = '\x1F'
 
+# global variables #
+PHONE_isSongPaused = False
+
 # Functions #
 def getExtIP():
     try:
@@ -31,11 +34,14 @@ def getExtIP():
 def playSong(fileName):
     global isSendingSong
     global songToSend
+    global PHONE_isSongPaused
 
     # TODO: if the file already exists in temp, don't make another
     # TODO: if the number of files or filesize of /temp/ passes a 
     #       threshold, then start deleting files as you make more
     try:
+        PHONE_isSongPaused = False
+
         if(os.name == 'nt'): #if testing the server on windows
             libPath  = os.getcwd() + '/library/'
             convPath = os.getcwd() + '/convert.bat '
@@ -78,14 +84,76 @@ def playSong(fileName):
     return returnPayload
 #end playSong
 
-def stopSong():
-    if(sharedMem.isSendingSong):
-        sharedMem.isSendingSong = False
-        returnPayload = ACK
-    else:
-        returnPayload = NAK+'No song is playing'
+def pauseSong():
+    global isSendingSong
+    global PHONE_isSongPaused
+
+    try:
+        if(sharedMem.isSendingSong and not PHONE_isSongPaused):
+            sharedMem.isSendingSong = False
+            PHONE_isSongPaused = True
+            returnPayload = ACK
+        else:
+            returnPayload = NAK+'No song is playing'
+        #endelse
+    except Exception as e:
+        print('Phone - ERROR: pauseSong')
+        print(e)
+        returnPayload = NAK
+    #endexcept
+
     return returnPayload
-#end stopSong
+#end pauseSong
+
+def resumeSong():
+    global isSendingSong
+    global PHONE_isSongPaused
+
+    try:
+        if(not sharedMem.isSendingSong and PHONE_isSongPaused):
+            sharedMem.isSendingSong = True
+            PHONE_isSongPaused = False
+            returnPayload = ACK
+        else:
+            returnPayload = NAK+'No song is paused'
+        #endelse
+    except Exception as e:
+        print('Phone - ERROR: resumeSong')
+        print(e)
+        returnPayload = NAK
+    #endexcept
+
+    return returnPayload
+#end resumeSong
+
+def isSendingSong():
+    global isSendingSong
+
+    try:
+        if(sharedMem.isSendingSong):
+            returnPayload = ACK+'y'
+        else:
+            returnPayload = ACK+'n'
+        #endelse
+    except Exception as e:
+        print('Phone - ERROR: isSendingSong')
+        print(e)
+        returnPayload = NAK
+    #endexcept
+
+    return returnPayload
+#end isSendingSong
+
+def getSpeakerList(phone_client_sock):
+    try:
+        returnPayload = NAK + 'Not yet implemented'
+    except Exception as e:
+        print('Phone - ERROR: getSpeakerList')
+        returnPayload = NAK
+    #endexcept
+
+    return returnPayload
+#end getSpeakerList
 
 def getSongList(client):
     print('Phone - Sending song list...')
@@ -165,6 +233,7 @@ def Phone_Client(ADDR):
             print('Phone - ERROR: while creating socket')
 
         #listen until phone opens socket to server
+        print(' ')
         print('Phone - Waiting for TCP phone client...')
         
         try:
@@ -191,8 +260,14 @@ def Phone_Client(ADDR):
             elif(data.startswith('play ')):
                 songName = data.split(' ',1)[1] #parse fileName
                 payload  = playSong(songName)
-            elif(data == 'stop'):
-                payload = stopSong()
+            elif(data == 'pause'):
+                payload = pauseSong()
+            elif(data == 'resume'):
+                payload = resumeSong()
+            elif(data == 'isSongPlaying'):
+                payload = isSendingSong()
+            elif(data == 'getSpeakerList'):
+                payload = getSpeakerList(phone_client_sock)
             elif(data == 'getSongList'):
                 payload = getSongList(phone_client_sock)
             else:
@@ -210,3 +285,4 @@ def Phone_Client(ADDR):
         phone_client_sock.close() # close the socket and do it again
         # repeat forever
     #endwhile
+#endPhone_Client

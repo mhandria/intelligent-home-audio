@@ -5,16 +5,21 @@ aliveSpeakers      = {} # {speakerNumber : isAlive}
 speakerAddresses   = {} # {'##.##.##.##' : speakerNumber}
 speakerWDTs        = {} # {speakerNumber : LastAliveTime}
 songFileIndexes    = {} # {speakerNumber : songFileIndex}
+speakerEnables     = {} # {speakerNumber : isEnabled}
+speakerEnumeration = {} # {'##.##.##.##' : speakerEnumeration}
+speakerVolume      = 0
 isSendingSong = False
 songToSend = ' '
 songFileIndex = 44
 
 # starting values of global variables
 def init():
-    speakerWDTs      = {}
-    aliveSpeakers    = {}
-    speakerAddresses = {}
-    songFileIndexes  = {} # {speakerNumber : songFileIndex}
+    speakerWDTs        = {}
+    aliveSpeakers      = {}
+    speakerAddresses   = {}
+    songFileIndexes    = {}
+    speakerEnables     = {}
+    speakerEnumeration = {}
     isSendingSong = False
     songToSend = ' '
     songFileIndex = 44

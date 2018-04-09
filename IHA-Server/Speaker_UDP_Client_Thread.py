@@ -15,7 +15,6 @@ def sendSongChunk(client_spkn, client_addr):
     global SONG_CHUNK_SIZE
     global UDP_lastPercentage
     global isSendingSong
-    global songFileIndex
     
     # get a copy of the current song index for this speaker
     UDP_songFileIndex = sharedMem.songFileIndexes[client_spkn]
@@ -114,15 +113,16 @@ def Speaker_UDP_Client(UDP_listen_sock):
                 # speaker has not yet been initalized
                 data = ' '.encode('UTF-8')
                 print('ERROR: Packet recieved from non-registered address')
+                client_spkn = -1
                 time.sleep(1)
             #endexcept
 
             # Parse the input and execute the appropriate action #
 
-            if(data.decode() == 's'):
+            if(data.decode() == 's' and client_spkn != -1):
                 sendSongChunk(client_spkn, client_addr)
                 sharedMem.speakerWDTs[client_spkn] = time.time() #reset the WDT
-            elif(data.decode() == 'h'):
+            elif(data.decode() == 'h' and client_spkn != -1):
                 sharedMem.speakerWDTs[client_spkn] = time.time() #reset the WDT
             #endelse
 
@@ -136,8 +136,10 @@ def Speaker_UDP_Client(UDP_listen_sock):
                         #endif
                     #endfor
                 #endif
-            except KeyError:
-                print('Key Error checking WDTs')
+            except Exception as e:
+                print('Key Error checking WDTs:')
+                print(type(e).__name__)
+                print(e)
             #endecept
 
             data = ' ' # clear the data so it is not parsed multiple times
