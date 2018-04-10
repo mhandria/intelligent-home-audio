@@ -60,7 +60,7 @@ def playSong(fileName):
 
             # set memory to initiate song sending
             sharedMem.isSendingSong = True
-            sharedMem.songToSend = fileName + '.wav'
+            sharedMem.songToSend = fileName
             sharedMem.songFileIndex = 44 # TODO: Change this when ogg vorbis is implemented
 
             # return sucessful message and continue listening for phone commands
@@ -145,6 +145,24 @@ def isSendingSong():
 
     return returnPayload
 #end isSendingSong
+
+def getCurrentSong():
+    try:
+        if(sharedMem.isSendingSong or PHONE_isSongPaused):
+            # if sending song, or song is paused, return that song's filename
+            returnPayload = sharedMem.songToSend
+        else:
+            # otherwise there isn't a song playing currently
+            returnPayload = NAK + 'No song is playing'
+        #endelse
+    except Exception as e:
+        print('Phone - ERROR: getCurrentSong')
+        print(e)
+        returnPayload = NAK
+    #endexcept
+
+    return returnPayload
+#end getCurrentSong
 
 def getSpeakerList(client):
     try:
@@ -380,6 +398,8 @@ def Phone_Client(ADDR):
                 payload = resumeSong()
             elif(data == 'isSongPlaying'):
                 payload = isSendingSong()
+            elif(data == 'getCurrentSong'):
+                payload = getCurrentSong()
             elif(data == 'getSpeakerList'):
                 payload = getSpeakerList(phone_client_sock)
             elif(data.startswith('enableSpeaker ')):

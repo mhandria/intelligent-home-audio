@@ -27,9 +27,9 @@ def sendSongChunk(client_spkn, client_addr):
         if(sharedMem.isSendingSong == True and sharedMem.speakerEnables[client_spkn]):
             # open the file
             if(os.name == 'nt'): #if windows
-                songFile = open(os.getcwd() + '/temp/' + sharedMem.songToSend, 'rb')
+                songFile = open(os.getcwd() + '/temp/' + sharedMem.songToSend + '.wav', 'rb')
             elif(platform.system() == 'Darwin'):
-                songFile = open(os.getcwd() + '/temp/' + sharedMem.songToSend, 'rb')
+                songFile = open(os.getcwd() + '/temp/' + sharedMem.songToSend + '.wav', 'rb')
             else: #else it's debian
                 songFile = open('/home/linaro/Desktop/temp/' + sharedMem.songToSend, 'rb')
 
