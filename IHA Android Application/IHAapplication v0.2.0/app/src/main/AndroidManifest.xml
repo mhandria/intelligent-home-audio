@@ -23,7 +23,8 @@
         <activity android:name=".SignUp" />
         <activity android:name=".SignIn" />
         <activity android:name=".HomePage" />
-        <activity android:name=".TestPage"></activity>
+        <activity android:name=".TestPage" />
+        <activity android:name=".MusicPage"></activity>
     </application>
 
 </manifest>
