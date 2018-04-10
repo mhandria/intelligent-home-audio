@@ -47,9 +47,8 @@ void setup()
   // Initialize communications
   UART_init();
   wifi_init();
-  proceede();
   client_init();
-  proceede();
+  flushSerial();
 }
 
 // Main program loop, runs after setup //
@@ -72,15 +71,21 @@ void loop()
   ESP.wdtFeed();
 
   // Check serial for incomming MCU commands
-  if(Serial.available() > 1 && ticksSinceLastRequest > 1000)
+  if(Serial.available() > 1 && ticksSinceLastRequest > 500)
   {
    input_char = Serial.read();
-   Serial.flush(); // only read the first char, this prevents overflow
-   getSongChunk();
+   
+   // Request a song chunk from the server if the char was 's'
+   if(input_char == 's')
+   {
+    getSongChunk();
+   }
+   
+   ticksSinceLastRequest = 0;
   }
   else
   {
-    if(ticksSinceLastRequest < 1001)
+    if(ticksSinceLastRequest < 40000)
     { // don't count forever to prevent overflow
       ticksSinceLastRequest++;
     }
@@ -104,7 +109,7 @@ void UART_init()
   unsigned char in = ' ';
   // Start the Serial communication to send messages to the MCU
   Serial.begin(BAUD_RATE);
-  
+  /*
   debug_enable = 0; // Debug is off by default
   while(in != 'c')
   {
@@ -125,6 +130,7 @@ void UART_init()
   debugLine(" ");
   debugLine("Handshake completed");
   debugLine(" ");
+  */
 }
 
 void wifi_init()
@@ -138,7 +144,7 @@ void wifi_init()
   while (WiFi.status() != WL_CONNECTED)
   { // Wait for the Wi-Fi to connect
     ESP.wdtFeed();
-    delay(1000);
+    delay(500);
     debugStr(".");
     ESP.wdtFeed();
   }
@@ -463,6 +469,32 @@ unsigned char getMCUChar()
   return in;
 }
 
+// Lets the MCU know that it's finished executing the current code block
+// and is ready to proceede to the next. Blocks code execution
+// until an acknowledge is returned from the MCU
+void proceede(void)
+{
+  flushSerial();
+  unsigned char in = ' ';
+  while(in != ACK)
+  {
+    Serial.write((unsigned char)ENQ);
+    delay(1000);
+    if(Serial.available() > 0)
+    {
+      in = Serial.read();
+    }
+  }
+}
+
+void flushSerial(void)
+{
+  while(Serial.available() > 0)
+  {
+    Serial.read();
+  }
+}
+
 unsigned char getServerChar()
 {
   unsigned char in;
@@ -536,24 +568,6 @@ void debugWrite(byte b)
   if(debug_enable)
   {
     Serial.write(b);
-  }
-}
-
-// Lets the MCU know that it's finished executing the current code block
-// and is ready to proceede to the next. Blocks code execution
-// until an acknowledge is returned from the MCU
-void proceede(void)
-{
-  Serial.flush();
-  unsigned char in = ' ';
-  while(in != ACK)
-  {
-    Serial.write((unsigned char)ENQ);
-    delay(1000);
-    if(Serial.available() > 0)
-    {
-      in = Serial.read();
-    }
   }
 }
 

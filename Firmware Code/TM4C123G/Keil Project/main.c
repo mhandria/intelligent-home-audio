@@ -69,13 +69,8 @@ unsigned int ticksSinceLastRequest;
 
 int main(void)
 {
+	// delay_ms(1000); // Give the ESP8266 some time to turn on and get the serial line quiet
 	init();
-	
-	delay_ms(500);
-  UART1_SendChar('s'); // MCU is ready to recieve song data
-	
-	delay_ms(500);
-  UART1_SendChar('s'); // MCU is ready to recieve song data
 	
 	UART0_SendString("Entering Main Loop");
 	UART0_CRLF();
@@ -115,7 +110,9 @@ void init(void)
 	
 	pulseLEDs();
 	
-	ESP_Init();
+	// ESP_Init();
+	
+	while((UART1_FR_R&UART_FR_RXFE) != 0); // wait until data is being sent to us
 	
 	EnableInterrupts();
 }
@@ -384,7 +381,7 @@ unsigned char readBuff(void)
 	else
 	{ // otherwise read the buffer and update the pointer
 			songPlaying = true;
-		
+			
 			out = *sampleReadPtr;
 			
 			if(sampleReadPtr - &sampleBuffer[0] < BUFFER_SIZE-1)
