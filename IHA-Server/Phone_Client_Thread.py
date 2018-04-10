@@ -163,8 +163,14 @@ def getSpeakerList(client):
                 else:
                     isConnected = 'n'
                 #endelse
+
+                if(sharedMem.speakerEnables[spkr_number]):
+                    isEnabled = 'y'
+                else:
+                    isEnabled = 'n'
+                #endelse
                 
-                payload = str(n) + US + isConnected + GS
+                payload = str(n) + ':' + isConnected + ':' + isEnabled +  ';'
                 print(payload)
                 client.send(payload.encode('utf-8'))
             #endfor
@@ -179,29 +185,6 @@ def getSpeakerList(client):
 
     return returnPayload
 #end getSpeakerList
-
-def isSpeakerEnabled(spkr_enum):
-    try:
-        if spkr_enum in list(sharedMem.speakerEnumeration.keys()):
-            spkr_addr = sharedMem.speakerEnumeration[spkr_enum]
-            spkr_num  = sharedMem.speakerAddresses[spkr_addr]
-            if(sharedMem.speakerEnables[spkr_num]):
-                returnPayload = ACK + 'y'
-            else:
-                returnPayload = ACK + 'n'
-            #endelse
-        else:
-            returnPayload = NAK + 'Invalid speaker enumerator: "' + str(spkr_enum) + '"'
-        #endelse
-    except Exception as e:
-        print('Phone - ERROR: isSpeakerEnabled')
-        print(e)
-        returnPayload = NAK
-    #endexcept
-
-    return returnPayload
-
-#end isSpeakerEnabled
 
 def enableSpeaker(spkr_enum):
     global speakerEnables
@@ -399,10 +382,6 @@ def Phone_Client(ADDR):
                 payload = isSendingSong()
             elif(data == 'getSpeakerList'):
                 payload = getSpeakerList(phone_client_sock)
-            elif(data.startswith('isSpeakerEnabled ')):
-                speakerEnum = data.split(' ',1)[1] #parse <speakerNumber>
-                speakerEnum =  int(speakerEnum)
-                payload = isSpeakerEnabled(speakerEnum)
             elif(data.startswith('enableSpeaker ')):
                 speakerEnum = data.split(' ',1)[1] #parse <speakerNumber>
                 speakerEnum =  int(speakerEnum)
