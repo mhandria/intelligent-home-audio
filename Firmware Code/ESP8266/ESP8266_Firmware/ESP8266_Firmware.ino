@@ -94,7 +94,8 @@ void loop()
   if(!client.connected())
   {
     // If we're disconnected try to reconnect forever
-    clientReconnect(); 
+    clientReconnect();
+    flushSerial();
   }
   // TODO: Check if Wi-Fi disconnected, if so, reconnect
 }
@@ -469,7 +470,7 @@ unsigned char getMCUChar()
   return in;
 }
 
-// Lets the MCU know that it's finished executing the current code block
+// Lets the MCU know that it's finished executing the cu rrent code block
 // and is ready to proceede to the next. Blocks code execution
 // until an acknowledge is returned from the MCU
 void proceede(void)

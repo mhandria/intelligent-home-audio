@@ -109,6 +109,7 @@ def Speaker_UDP_Client(UDP_listen_sock):
 
     # enter handle loop
     print('Speaker UDP Thread Started')
+
     while(True):
         try:
             # Check for any buffered UDP input #
@@ -125,8 +126,14 @@ def Speaker_UDP_Client(UDP_listen_sock):
                 # catch the exception thrown when the TCP thread for the corresponding
                 # speaker has not yet been initalized
                 data = ' '.encode('UTF-8')
-                print('ERROR: Packet recieved from non-registered address')
+                print('Packet recieved from non-registered address')
+                
                 client_spkn = -1
+                
+                # assign address to a bad speaker number #
+                sharedMem.speakerAddresses.update({client_addr : client_spkn})
+                sharedMem.speakerWDTs.update(     {client_spkn : time.time() + 5})
+
                 time.sleep(1)
             #endexcept
 
@@ -135,7 +142,7 @@ def Speaker_UDP_Client(UDP_listen_sock):
             if(data.decode() == 's' and client_spkn != -1):
                 sendSongChunk(client_spkn, client_addr)
                 sharedMem.speakerWDTs[client_spkn] = time.time() #reset the WDT
-            elif(data.decode() == 'h' and client_spkn != -1):
+            elif(data.decode() == 'h'):
                 sharedMem.speakerWDTs[client_spkn] = time.time() #reset the WDT
             #endelse
 
