@@ -54,7 +54,7 @@ void SysTick_Handler(void);        // Sends a sample to the the DAC
 
 // Constants Section //
 const unsigned long BUFFER_SIZE = 30000;
-const double SAMPLE_FREQ = 44100;
+const double SAMPLE_FREQ = 25000;
 
 // Global Variables Section //
 

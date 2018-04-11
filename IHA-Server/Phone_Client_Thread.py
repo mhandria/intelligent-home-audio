@@ -36,6 +36,7 @@ def getExtIP():
 def playSong(fileName):
     global isSendingSong
     global songToSend
+    global songSize
     global PHONE_isSongPaused
 
     # TODO: if the file already exists in temp, don't make another
@@ -46,9 +47,11 @@ def playSong(fileName):
 
         if(os.name == 'nt'): #if testing the server on windows
             libPath  = os.getcwd() + '/library/'
+            tempPath = os.getcwd() + '/temp/'
             convPath = os.getcwd() + '/convert.bat '
         else: # otherwise it's the linux server
             libPath  = '/home/linaro/Desktop/library/'
+            tempPath = '/home/linaro/Desktop/temp/'
             convPath = '/home/linaro/Desktop/Source/convert.sh '
         #endelse
 
@@ -60,9 +63,16 @@ def playSong(fileName):
 
             # set memory to initiate song sending
             sharedMem.isSendingSong = True
-            sharedMem.songToSend = fileName
             sharedMem.songFileIndex = 44 # TODO: Change this when ogg vorbis is implemented
+            
+            # get the song data
+            songFile = open(tempPath + fileName + '.wav', 'rb')
+            songFile.seek(0, 2)
+            sharedMem.songSize = songFile.tell()
 
+            songFile.seek(0,0) # seek to the beggining of the file
+            sharedMem.songToSend = songFile.read(sharedMem.songSize) # read the whole file
+            
             # return sucessful message and continue listening for phone commands
             returnPayload = ACK+'Playing: ' + fileName
 
@@ -80,6 +90,8 @@ def playSong(fileName):
         #endelse
     except Exception as e:
         print('Phone - ERROR: Failed to play "' + fileName + '"')
+        print('Error on line {}'.format(sys.exc_info()[-1].tb_lineno))
+        print(e)
         returnPayload = "ERROR: Playing " + fileName
     #end except
 

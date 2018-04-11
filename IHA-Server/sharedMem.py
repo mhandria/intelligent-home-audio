@@ -9,7 +9,8 @@ speakerEnables     = {} # {speakerNumber : isEnabled}
 speakerEnumeration = {} # {speakerEnumeration : '##.##.##.##'}
 speakerVolume      = 1  # 0.0 - 1.0
 isSendingSong = False
-songToSend = ' '
+songToSend = bytes()
+songSize = 0
 songFileIndex = 44
 
 # starting values of global variables
@@ -22,5 +23,6 @@ def init():
     speakerEnumeration = {}
     speakerVolume      = 0.0 
     isSendingSong = False
-    songToSend = ' '
+    songToSend = bytes()
+    songSize = 0
     songFileIndex = 44
