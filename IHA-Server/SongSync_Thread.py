@@ -7,7 +7,7 @@ import sharedMem
 def SongSync():
     try:
         while True:
-            time.sleep(0.7)
+            time.sleep(0.3)
 
             maxPos = 0;
             
