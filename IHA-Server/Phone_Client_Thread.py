@@ -48,7 +48,7 @@ def playSong(fileName):
             libPath  = os.getcwd() + '/library/'
             convPath = os.getcwd() + '/convert.bat '
         else: # otherwise it's the linux server
-            libPath  = '/home/linaro/Desktop/Source/'
+            libPath  = '/home/linaro/Desktop/library/'
             convPath = '/home/linaro/Desktop/Source/convert.sh '
         #endelse
 
@@ -259,7 +259,7 @@ def getSongList(client):
 
     if(os.name == 'nt'): # if windows
         filepath = os.getcwd() + '/library/'
-    elif(platform.system() == 'Debian'):
+    elif(platform.system() == 'Darwin'):
         filepath = os.getcwd() + '/library'
     else: #otherwise debian server
         filepath = '/home/linaro/Desktop/library/'

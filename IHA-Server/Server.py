@@ -28,14 +28,15 @@ global speakerAddresses
 global speakerWDTs
 global speakerEnumeration
 
-#Tinkerboard ip setup
-# get info for wlan0
-# ipaddrs = netifaces.ifaddresses('wlan0') # uncomment for tinkerboard
-# get wlan0 interface address
-# wlan0 = ipaddrs[2][0]['addr'] #uncomment for tinkerboard
+#Tinkerboard ip setup - Uncomment these for TinkerBoard
+# wlan0 = netifaces.ifaddresses('wlan0') # uncomment for tinkerboard
+# eth0  = netifaces.ifaddresses('eth0') # uncomment for tinkerboard
+# eth0_wlan0 = wlan0[2][0]['addr'] #uncomment for tinkerboard
+# eth0_addr  =  eth0[2][0]['addr'] #uncomment for tinkerboard
 
 #Constants
-# HOST        = wlan0           #uncomment for tinkerboard (as well as above 2 statements)
+# HOST        = wlan0_addr
+# HOST        = eth0_addr
 HOST        = '192.168.1.7' #uncomment for Blake's Desktop on his home network
 # HOST        = '192.168.1.103'  #uncomment for Blake's Laptop on mobile hotspot
 # HOST        = '192.168.1.131' #uncoment for Michael's Laptop.
