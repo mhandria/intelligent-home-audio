@@ -23,7 +23,5 @@ public class LandingPage extends AppCompatActivity {
     }
 
     public void signUp(View view) {
-        userChoice = new Intent(this, SignUp.class);
-        startActivity(userChoice);
     }
 }

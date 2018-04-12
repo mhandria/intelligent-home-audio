@@ -21,7 +21,7 @@ public class TestPage extends AppCompatActivity implements onComplete{
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_test_page);
-        SocketConnection _connection = new SocketConnection(this, this);
+        //SocketConnection _connection = new SocketConnection(this, this, ho);
         Intent testIntent = getIntent();
         localHost = testIntent.getStringExtra("localHost");
         externalHost = testIntent.getStringExtra("externalHost");
@@ -44,7 +44,7 @@ public class TestPage extends AppCompatActivity implements onComplete{
 
     public void sendData(View view) {
         EditText data = (EditText)findViewById(R.id.commandString);
-        SocketConnection _connection = new SocketConnection(this, this);
-        _connection.executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR, "true", port, data.getText().toString(), localHost, externalHost);
+        //SocketConnection _connection = new SocketConnection(this, this);
+        //_connection.executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR, "true", port, data.getText().toString(), localHost, externalHost);
     }
 }

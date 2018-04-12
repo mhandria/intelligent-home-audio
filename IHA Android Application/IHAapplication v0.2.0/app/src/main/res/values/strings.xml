@@ -5,4 +5,11 @@
     <string name="skip_next">&#xE044;</string>
     <string name="skip_previous">&#xE045;</string>
     <string name="replay">&#xE042;</string>
+    <string name="menu">&#xE5D2;</string>
+    <string name="title_activity_sideview">Sideview</string>
+
+    <string name="navigation_drawer_open">Open navigation drawer</string>
+    <string name="navigation_drawer_close">Close navigation drawer</string>
+
+    <string name="action_settings">Settings</string>
 </resources>
