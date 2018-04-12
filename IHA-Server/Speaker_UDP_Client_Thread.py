@@ -8,6 +8,7 @@ import os
 import sys
 import platform
 import time
+import numpy as np
 
 # constants
 SONG_CHUNK_SIZE = 1400
@@ -50,10 +51,7 @@ def sendSongChunk(client_spkn, client_addr):
             #endelse
 
             # get the chunk and apply volume modifier #
-            songChunkAdjusted = bytes()
-            for i in range(UDP_songFileIndex,UDP_songFileIndex + songChunkSize):
-                songChunkAdjusted += bytes([int(((float(sharedMem.songToSend[i]) - 128)*sharedMem.speakerVolume) + 128)])
-            # endfor
+            songChunkAdjusted = (sharedMem.songToSend[UDP_songFileIndex:UDP_songFileIndex + songChunkSize]*sharedMem.speakerVolume).astype(np.uint8).tobytes()
 
             # send the chunk
             UDP_sendSocket.sendto(songChunkAdjusted,(client_addr,14124))
@@ -128,6 +126,8 @@ def Speaker_UDP_Client(UDP_listen_sock):
                 sendSongChunk(client_spkn, client_addr)
                 sharedMem.speakerWDTs[client_spkn] = time.time() #reset the WDT
             elif(data.decode() == 'h'):
+                # return the volume
+                sharedMem.speakerVolume
                 sharedMem.speakerWDTs[client_spkn] = time.time() #reset the WDT
             #endelse
 

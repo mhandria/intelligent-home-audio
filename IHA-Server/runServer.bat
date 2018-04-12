@@ -1,2 +1,3 @@
-Server.py
+python Server.py
+
 pause

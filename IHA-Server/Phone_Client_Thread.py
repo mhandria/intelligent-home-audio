@@ -9,6 +9,7 @@ import os
 import sys
 import platform
 from mutagen.easyid3 import EasyID3 as ID3
+import numpy as np
 
 # Constants #
 BUFFER_SIZE = 256
@@ -39,7 +40,6 @@ def playSong(fileName):
     global songSize
     global PHONE_isSongPaused
 
-    # TODO: if the file already exists in temp, don't make another
     # TODO: if the number of files or filesize of /temp/ passes a
     #       threshold, then start deleting files as you make more
     try:
@@ -56,10 +56,14 @@ def playSong(fileName):
         #endelse
 
         if(os.path.isfile(libPath + fileName)):
-            #convert the file to mono 16-bit 44.1KHz .wav into /temp/
-            print('Converting ' + fileName)
-            os.system(convPath + '"' + fileName + '"')
-            print('Converted')
+            if(os.path.isfile(tempPath + fileName + '.wav')):
+                print('Song already converted.')
+            else:
+                #convert the file to mono 16-bit 44.1KHz .wav into /temp/
+                print('Converting ' + fileName)
+                os.system(convPath + '"' + fileName + '"')
+                print('Converted')
+            #endelse
 
             # set memory to initiate song sending
             sharedMem.isSendingSong = True
@@ -71,7 +75,10 @@ def playSong(fileName):
             sharedMem.songSize = songFile.tell()
 
             songFile.seek(0,0) # seek to the beggining of the file
-            sharedMem.songToSend = songFile.read(sharedMem.songSize) # read the whole file
+            # read the whole file
+            
+            sharedMem.songToSend = np.fromfile(songFile, dtype=np.uint8)
+            # sharedMem.songToSend = np.array(songFile.read(sharedMem.songSize))
             
             # return sucessful message and continue listening for phone commands
             returnPayload = ACK+'Playing: ' + fileName
@@ -269,61 +276,69 @@ def disableSpeaker(spkr_enum):
 def getSongList(client):
     print('Phone - Sending song list...')
 
-    if(os.name == 'nt'): # if windows
-        filepath = os.getcwd() + '/library/'
-    elif(platform.system() == 'Darwin'):
-        filepath = os.getcwd() + '/library'
-    else: #otherwise debian server
-        filepath = '/home/linaro/Desktop/library/'
+    try:
+        if(os.name == 'nt'): # if windows
+            filepath = os.getcwd() + '/library/'
+        elif(platform.system() == 'Darwin'):
+            filepath = os.getcwd() + '/library'
+        else: #otherwise debian server
+            filepath = '/home/linaro/Desktop/library/'
 
-    # get a list of all the filenames in the library
-    files = [f for f in os.listdir(filepath) if os.path.isfile(os.path.join(filepath, f))]
+        # get a list of all the filenames in the library
+        files = [f for f in os.listdir(filepath) if os.path.isfile(os.path.join(filepath, f))]
 
-    if not files: # if the library is empty return NAK
-        payload = NAK
-    else: # otherwise send all the information, one song per packet
-        payload = ACK
-        client.send(payload.encode('utf-8'))
-
-        tags = ['title', 'artist', 'album']
-        mf = None
-        for f in files:
-            try:
-                # create ID3 tag reader
-                mf = ID3(filepath + f)
-                validID3 = True
-            except:
-                validID3 = False
-            #endexcept
-
-            if(validID3):
-                # add filename to payload
-                payload = f
-                for t in tags:
-                    payload = payload + US # mark new attribute by unit seperator
-                    try:
-                        # add tag to payload if it exists
-                        payload = payload + mf[t][0]
-                    except:
-                        # otherwise it's <NUL>
-                        payload = payload + NUL
-                    #endexcept
-                #endfor
-            else:
-                payload = f
-                for t in tags: payload = payload + NUL + US
-            #endelse
-
-            # group seperator to show end of current song
-            payload = payload + GS
-
-            #send the payload, move to next song
-            print(payload)
+        if not files: # if the library is empty return NAK
+            payload = NAK
+        else: # otherwise send all the information, one song per packet
+            payload = ACK
             client.send(payload.encode('utf-8'))
-        #endfor
 
-        returnPayload = EOT
-    #endelse
+            tags = ['title', 'artist', 'album']
+            mf = None
+            for f in files:
+                try:
+                    # create ID3 tag reader
+                    mf = ID3(filepath + f)
+                    validID3 = True
+                except:
+                    validID3 = False
+                #endexcept
+
+                if(validID3):
+                    # add filename to payload
+                    payload = f
+                    for t in tags:
+                        payload = payload + US # mark new attribute by unit seperator
+                        try:
+                            # add tag to payload if it exists
+                            payload = payload + mf[t][0]
+                        except:
+                            # otherwise it's <NUL>
+                            payload = payload + NUL
+                        #endexcept
+                    #endfor
+                else:
+                    payload = f
+                    for t in tags: payload = payload + NUL + US
+                #endelse
+
+                # group seperator to show end of current song
+                payload = payload + GS
+
+                #send the payload, move to next song
+                # print(payload.decode())
+                client.send(payload.encode('utf-8'))
+            #endfor
+
+            returnPayload = EOT
+        #endelse
+    except Exception as e:
+            print('Phone - Error getSongList')
+            print('Error on line {}'.format(sys.exc_info()[-1].tb_lineno))
+            print(type(e).__name__)
+            print(e)
+            returnPayload = NAK
+    #endexcept
     return returnPayload
 #end getSongList
 
