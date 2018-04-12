@@ -25,8 +25,6 @@ def Speaker_Client(client, spkn, addr):
 
     # when a speakers is connected, clear the buffers so that they are synced #
     pauseSong()
-    time.sleep(2)
-    resumeSong()
     
     #enter loop for handling client
     try:
@@ -45,8 +43,7 @@ def Speaker_Client(client, spkn, addr):
             if(data == '?'):
                 print('Speaker - TCP Client #{0} Payload:  {1}'.format(spkn,data))
                 returnMessage('y', spkn, client)
-                pauseSong()
-                time.sleep(2)
+                time.sleep(0.5)
                 resumeSong()
             #endif
             

@@ -10,6 +10,7 @@ speakerEnumeration = {} # {speakerEnumeration : '##.##.##.##'}
 speakerVolume      = 1  # 0.0 - 1.0
 isSendingSong = False
 songToSend = bytes()
+currentSongName = ''
 songSize = 0
 songFileIndex = 44
 
@@ -23,6 +24,7 @@ def init():
     speakerEnumeration = {}
     speakerVolume      = 0.0 
     isSendingSong = False
+    currentSongName = ''
     songToSend = bytes()
     songSize = 0
     songFileIndex = 44

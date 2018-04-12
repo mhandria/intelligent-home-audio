@@ -40,6 +40,7 @@ def playSong(fileName):
     global songToSend
     global songSize
     global PHONE_isSongPaused
+    global currentSongName
 
     # TODO: if the number of files or filesize of /temp/ passes a
     #       threshold, then start deleting files as you make more
@@ -81,7 +82,6 @@ def playSong(fileName):
             # read the whole file
             
             sharedMem.songToSend = np.fromfile(songFile, dtype=np.uint8)
-            # sharedMem.songToSend = np.array(songFile.read(sharedMem.songSize))
             
             # return sucessful message and continue listening for phone commands
             returnPayload = ACK+'Playing: ' + fileName
@@ -90,11 +90,11 @@ def playSong(fileName):
                 sharedMem.songFileIndexes[k] = 44
             #endfor
 
-            # TODO: Make SongSync start here instead of server.py
-            #       then the thread can die when isSendingSong == false.
-            #       This function will have to clean up old SongSync threads
-            #       when starting a new song
-
+            # set the songName for getCurrentSong#
+            sharedMem.currentSongName = fileName
+            pauseSong()
+            time.sleep(1.5)
+            resumeSong()
         else: #if the file name doesn't exist
             returnPayload = NAK+'File "' + fileName + '" does not exist'
         #endelse
@@ -172,7 +172,7 @@ def getCurrentSong():
     try:
         if(sharedMem.isSendingSong or PHONE_isSongPaused):
             # if sending song, or song is paused, return that song's filename
-            returnPayload = sharedMem.songToSend
+            returnPayload = ACK + sharedMem.currentSongName
         else:
             # otherwise there isn't a song playing currently
             returnPayload = NAK + 'No song is playing'
