@@ -13,6 +13,41 @@ import numpy as np
 # constants
 SONG_CHUNK_SIZE = 1400
 UDP_lastPercentage = 0
+UDP_TicksSinceLastSync = 0
+
+def syncSpeakers():
+    global songFileIndexes
+    global UDP_TicksSinceLastSync
+
+    try:
+        if(UDP_TicksSinceLastSync > 20):
+            # if it has been enough time since the last sync
+            # sync the speakers
+            UDP_TicksSinceLastSync = 0
+            maxPos = 0;
+            
+            # get the value of the furthest most song position #
+            for k in list(sharedMem.songFileIndexes):
+                if(sharedMem.songFileIndexes[k] > maxPos):
+                    maxPos = sharedMem.songFileIndexes[k]
+                #endif
+            #endfor
+
+            # update all song positions to maxPos #
+            for k in list(sharedMem.songFileIndexes):
+                sharedMem.songFileIndexes[k] = maxPos
+            #endfor
+        else:
+            # otherwise increment the counter
+            UDP_TicksSinceLastSync = UDP_TicksSinceLastSync + 1
+        #endelse
+    except Exception as e:
+        print('Error: syncSpeakers')
+        print('Error on line {}'.format(sys.exc_info()[-1].tb_lineno))
+        print(type(e).__name__)
+        print(e)
+
+#end syncSpeakers
 
 def sendSongChunk(client_spkn, client_addr):
     global SONG_CHUNK_SIZE
@@ -20,8 +55,10 @@ def sendSongChunk(client_spkn, client_addr):
     global isSendingSong
     global speakerEnables
     global UDP_sendSocket
-    
+
     try:
+        # syncSpeakers()
+
         # get a copy of the current song index for this speaker
         UDP_songFileIndex = sharedMem.songFileIndexes[client_spkn]
 
@@ -78,6 +115,7 @@ def Speaker_UDP_Client(UDP_listen_sock):
     global speakerAddresses
     global speakerWDTs
     global UDP_sendSocket
+    global UDP_TicksSinceLastSync
 
     SONG_CHUNK_SIZE = 1400
 
@@ -89,6 +127,9 @@ def Speaker_UDP_Client(UDP_listen_sock):
 
     # used to send song data
     UDP_sendSocket = socket.socket(socket.AF_INET,socket.SOCK_DGRAM)
+
+    # counter for songSync
+    UDP_TicksSinceLastSync = 0
 
     # enter handle loop
     print('Speaker UDP Thread Started')

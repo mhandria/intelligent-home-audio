@@ -10,6 +10,7 @@ import sys
 import platform
 from mutagen.easyid3 import EasyID3 as ID3
 import numpy as np
+import time
 
 # Constants #
 BUFFER_SIZE = 256
@@ -67,7 +68,9 @@ def playSong(fileName):
 
             # set memory to initiate song sending
             sharedMem.isSendingSong = True
-            sharedMem.songFileIndex = 44 # TODO: Change this when ogg vorbis is implemented
+            for k in list(sharedMem.songFileIndexes):
+                sharedMem.songFileIndexes[k] = 44
+            #endfor
             
             # get the song data
             songFile = open(tempPath + fileName + '.wav', 'rb')
@@ -233,6 +236,12 @@ def enableSpeaker(spkr_enum):
             spkr_addr = sharedMem.speakerEnumeration[spkr_enum]
             spkr_num = sharedMem.speakerAddresses[spkr_addr]
             sharedMem.speakerEnables.update({spkr_num : True})
+
+            # when a speakers is connected, clear the buffers so that they are synced #
+            pauseSong()
+            time.sleep(2)
+            resumeSong()
+
             returnPayload = ACK
         else:
             returnPayload = NAK + 'Invalid speaker enumerator: "' + str(spkr_enum) + '"'

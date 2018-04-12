@@ -5,9 +5,11 @@ import sharedMem
 # same position. (Furthest most in the song)
 
 def SongSync():
+    global songFileIndexes
+
     try:
         while True:
-            time.sleep(0.5)
+            time.sleep(1)
 
             maxPos = 0;
             

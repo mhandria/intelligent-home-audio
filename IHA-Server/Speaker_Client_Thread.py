@@ -5,6 +5,8 @@ import socket
 import sharedMem
 import os
 import time
+from Phone_Client_Thread import pauseSong
+from Phone_Client_Thread import resumeSong
 
 # global variables
 
@@ -21,6 +23,11 @@ def Speaker_Client(client, spkn, addr):
 
     client.setblocking(0)
 
+    # when a speakers is connected, clear the buffers so that they are synced #
+    pauseSong()
+    time.sleep(2)
+    resumeSong()
+    
     #enter loop for handling client
     try:
         while(sharedMem.aliveSpeakers[spkn]):
@@ -38,6 +45,9 @@ def Speaker_Client(client, spkn, addr):
             if(data == '?'):
                 print('Speaker - TCP Client #{0} Payload:  {1}'.format(spkn,data))
                 returnMessage('y', spkn, client)
+                pauseSong()
+                time.sleep(2)
+                resumeSong()
             #endif
             
             # repeat forever
@@ -53,6 +63,7 @@ def Speaker_Client(client, spkn, addr):
     # Remove client from global lists
     sharedMem.aliveSpeakers.pop(spkn)
     sharedMem.speakerWDTs.pop(spkn)
+    sharedMem.songFileIndexes.pop(spkn)
 
     print('Speaker - TCP Client #{0} thread closed'.format(spkn))
 #endSpeaker_Client
