@@ -385,6 +385,44 @@ def setSpeakerVolume(volume):
     return returnPayload
 #end getSpeakerVolume
 
+def incVolume():
+    global speakerVolume
+    try:
+        newVolume = sharedMem.speakerVolume + 0.05
+        if(newVolume >= 0 and newVolume <= 1):
+            sharedMem.speakerVolume = newVolume
+        #endif
+
+        print('New volume = {0}%'.format(round(sharedMem.speakerVolume*100)))
+
+        returnPayload = ACK
+    except Exception as e:
+        print('Phone - ERROR: incVolume')
+        print(e)
+        returnPayload = NAK
+    #endexcept
+    return returnPayload
+#end incVolume
+
+def decVolume():
+    global speakerVolume
+    try:
+        newVolume = sharedMem.speakerVolume - 0.05
+        if(newVolume >= 0 and newVolume <= 1):
+            sharedMem.speakerVolume = newVolume
+        #endif
+
+        print('New volume = {0}%'.format(round(sharedMem.speakerVolume*100)))
+
+        returnPayload = ACK
+    except Exception as e:
+        print('Phone - ERROR: deccVolume')
+        print(e)
+        returnPayload = NAK
+    #endexcept
+    return returnPayload
+#end incVolume
+
 # Main #
 def Phone_Client(ADDR):
     print('')
@@ -453,6 +491,10 @@ def Phone_Client(ADDR):
             elif(data.startswith('setSpeakerVolume ')):
                 volume = data.split(' ',1)[1] # parse <volume>
                 payload = setSpeakerVolume(volume)
+            elif(data == 'incVolume'):
+                payload = incVolume()
+            elif(data == 'decVolume'):
+                payload = decVolume()
             else:
                 payload = NAK+'Invalid Command: "' + data + '"'
             #endelse
