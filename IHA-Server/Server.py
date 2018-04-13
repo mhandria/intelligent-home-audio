@@ -8,6 +8,7 @@ import socket
 import sys
 import os
 import time
+import psutil
 # import netifaces # uncomment for tinkerboard
 from threading import Thread
 from socketserver import ThreadingMixIn
@@ -34,7 +35,6 @@ global speakerEnumeration
 # wlan0_addr = wlan0[2][0]['addr']
 # eth0_addr  =  eth0[2][0]['addr']
 
-
 #Constants
 # HOST        = wlan0_addr
 # HOST = eth0_addr
@@ -47,6 +47,14 @@ MCU_PORT    = 14124
 PHONE_ADDR  = (HOST,PHONE_PORT)
 MCU_ADDR    = (HOST,MCU_PORT)
 #endConstants
+
+# raise the priority of this process
+p = psutil.Process(os.getpid())
+if(os.name != 'nt'):
+    p.nice(10)
+else:
+    p.nice(psutil.HIGH_PRIORITY_CLASS)
+#endelse
 
 sharedMem.init()
 
