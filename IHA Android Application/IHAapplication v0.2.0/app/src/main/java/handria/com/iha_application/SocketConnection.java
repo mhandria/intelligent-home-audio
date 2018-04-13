@@ -23,6 +23,7 @@ import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
+import java.util.concurrent.TimeUnit;
 
 import static android.content.Context.WIFI_SERVICE;
 
@@ -58,14 +59,6 @@ public class SocketConnection extends AsyncTask<String, String, String[]> {
         txtProgress.setVisibility(View.INVISIBLE);
     }
 
-    @Override
-    protected void onPreExecute(){
-        loadBar.setVisibility(View.VISIBLE);
-        loadBar.animate();
-        txtProgress.setVisibility(View.VISIBLE);
-        txtProgress.setText("Loading...");
-        homeView.setVisibility(View.INVISIBLE);
-    }
 
     @Override
     protected void onPostExecute(String[] res){
@@ -78,6 +71,11 @@ public class SocketConnection extends AsyncTask<String, String, String[]> {
 
     @Override
     protected void onProgressUpdate(String... disp){
+        loadBar.setVisibility(View.VISIBLE);
+        loadBar.animate();
+        txtProgress.setVisibility(View.VISIBLE);
+        txtProgress.setText("Loading...");
+        homeView.setVisibility(View.INVISIBLE);
         txtProgress.setText(disp[0]);
     }
 
@@ -85,33 +83,39 @@ public class SocketConnection extends AsyncTask<String, String, String[]> {
     protected String[] doInBackground(String... params){
         int port = Integer.parseInt(params[1]);
         String cmd = params[2];
-        String[] hostNames;
+        String hostName;
         ArrayList<String> response = new ArrayList<>();
         response.add("INVALID");
-        response.add("INVALID");
         if(params[0].equals("true")){
-            hostNames = new String[] {params[3], params[4]};
-            String _hostName = testConnection(hostNames, port);
+            hostName = params[3];
+            String _hostName = testConnection(hostName);
             if(_hostName.equals("")){
-                hostNames = findIp(port);
-                _hostName = testConnection(hostNames, port);
+                hostName = findIp(port);
+                _hostName = testConnection(hostName);
             }
-            response.set(0, hostNames[0]);
-            response.set(1, hostNames[1]);
+            response.set(0, hostName);
             response.add(cmd);
+            try{
+                TimeUnit.MILLISECONDS.sleep(50);
+            }catch(Exception e){
+
+            }
             ArrayList<String> res = sendCmd(_hostName, port, cmd);
             if(res.size() > 0 && res.get(0).equals("INVALID CONNECTION")){
                 response.set(0, "INVALID");
-                response.set(1, "INVALID");
             }else {
                 response.addAll(res);
             }
         }else{
-            hostNames = findIp(port);
-            response.set(0, hostNames[0]);
-            response.set(1, hostNames[1]);
+            hostName = findIp(port);
+            response.set(0, hostName);
             response.add(cmd);
-            String _hostName = testConnection(hostNames, port);
+            String _hostName = testConnection(hostName);
+            try{
+                TimeUnit.MILLISECONDS.sleep(50);
+            }catch(Exception e){
+
+            }
             response.addAll(sendCmd(_hostName, port, cmd));
         }
         return response.toArray(new String[response.size()]);
@@ -119,37 +123,23 @@ public class SocketConnection extends AsyncTask<String, String, String[]> {
 
 
 
-    private String testConnection(String[] hostNames, int port){
-        publishProgress("Testing Connection");
+    private String testConnection(String hostNames){
         String correctHost = "";
         //nested try catch to attempt socket connection.
         try {
-            publishProgress("First Testing "+hostNames[0]);
-            InetAddress address = InetAddress.getByName(hostNames[0]);
+            InetAddress address = InetAddress.getByName(hostNames);
             boolean reachable = address.isReachable(1000);
             if(reachable)
-                correctHost = hostNames[0];
+                correctHost = hostNames;
             else
                 throw new Exception();
         }catch(Exception locSocket){
             Log.e("Socket Attempt", "local host socket failed");
-            try{
-                publishProgress("Second Testing "+hostNames[1]);
-                InetAddress address = InetAddress.getByName(hostNames[0]);
-                boolean reachable = address.isReachable(1000);
-                if(reachable)
-                    correctHost = hostNames[1];
-                else
-                    throw new Exception();
-            }catch(Exception extSocket){
-                Log.e("Socket Attempt", "external host socket failed");
-            }
         }
         return correctHost;
     }
 
     private ArrayList<String> sendCmd(String hostName, int port, String cmd){
-        publishProgress("Sending Commands: "+cmd);
         ArrayList<String> res = new ArrayList<>();
 
         if(cmd.equals("")){
@@ -157,29 +147,27 @@ public class SocketConnection extends AsyncTask<String, String, String[]> {
             return res;
         }
 
+
         try {
             Socket socket = new Socket(hostName, port);
             BufferedReader buffRead = new BufferedReader(new InputStreamReader(socket.getInputStream()));
             PrintWriter out = new PrintWriter(socket.getOutputStream(), true);
-
+            boolean status = true;
             if(cmd.equals("getSongList")) {
+                publishProgress("fetching songs");
                 boolean finishTx = false;
                 while (!finishTx) {
                     out.println(cmd);
-                    publishProgress("Waiting for Response...("+cmd+")");
-                    long endTimeMillis = System.currentTimeMillis() + 500;
+                    long endTimeMillis = System.currentTimeMillis() + 10000;
 
                     while(!buffRead.ready()){
                         if(System.currentTimeMillis() >= endTimeMillis){
-                            socket = new Socket(hostName, port);
-                            buffRead = new BufferedReader(new InputStreamReader(socket.getInputStream()));
-                            out = new PrintWriter(socket.getOutputStream(), true);
-                            out.println(cmd);
+                            status = false;
                             break;
                         }
                         if(this.isCancelled()) return res;
                     }
-
+                    if(!status) return res;
                     String currentData = buffRead.readLine();
                     StringBuilder songName = new StringBuilder();
                     boolean endOfSong = false;
@@ -209,19 +197,16 @@ public class SocketConnection extends AsyncTask<String, String, String[]> {
                 }
             }else {
                 out.println(cmd);
-                publishProgress("Waiting for Response...(" + cmd + ")");
                 if(!cmd.equals("stat")) {
-                    long endTimeMillis = System.currentTimeMillis() + 500;
+                    long endTimeMillis = System.currentTimeMillis() + 10000;
                     while (!buffRead.ready()) {
                         if(System.currentTimeMillis() >= endTimeMillis){
-                            socket = new Socket(hostName, port);
-                            buffRead = new BufferedReader(new InputStreamReader(socket.getInputStream()));
-                            out = new PrintWriter(socket.getOutputStream(), true);
-                            out.println(cmd);
+                            status = false;
                             break;
                         }
                         if (this.isCancelled()) return res;
                     }
+                    if(!status) return res;
                     //int ResponseCheck = buffRead.read();
                     if (buffRead.read() == ACK) {
                         res.add("true");
@@ -234,10 +219,10 @@ public class SocketConnection extends AsyncTask<String, String, String[]> {
                 }
             }
             socket.close();
-            publishProgress("Done Sending Commands");
+        }catch(IOException ex) {
+            res.add("INVALID CONNECTION");
         }catch(Exception e){
             Log.e("Sending Cmd", "Something went wrong when trying to send a command");
-            res.add("INVALID CONNECTION");
         }
         return res;
     }
@@ -250,23 +235,21 @@ public class SocketConnection extends AsyncTask<String, String, String[]> {
      * @param port - 14123
      * @return  String[] - local ip address, external ip address, (respectively)
      */
-    private String[] findIp(int port){
+    private String findIp(int port){
         publishProgress("Ping Sweep");
         String hostName = "INVALID";
-        String externalHostName = "INVALID";
-        String[] names = {hostName, externalHostName};
         try {
             Context _context = _mContextRef.get();
             WifiManager wm = (WifiManager) _context.getApplicationContext().getSystemService(WIFI_SERVICE);
             String ip = Formatter.formatIpAddress(wm.getConnectionInfo().getIpAddress());
             String _prefix = ip.substring(0, ip.lastIndexOf('.') + 1);
 
-            for (int i = 0; i < 255; i++) {
+            for (int i = 1; i < 255; i++) {
                 //when running on an virtual machine device, comment the one below
                 //this and uncomment the other testIp.
                 String testIp = _prefix + String.valueOf(i);
                 if(this.isCancelled()){
-                    return names;
+                    return hostName;
                 }
                 //String testIp = "192.168.1."+String.valueOf(i);
                 publishProgress("Pinging: "+testIp);
@@ -278,7 +261,6 @@ public class SocketConnection extends AsyncTask<String, String, String[]> {
                         _test.connect(new InetSocketAddress(testIp, port), 1000);
                         hostName = testIp;
                         _test.close();
-                        externalHostName = getExternalHostName(hostName, port);
                         break;
                     } catch (Exception e) {
                         continue;
@@ -290,8 +272,7 @@ public class SocketConnection extends AsyncTask<String, String, String[]> {
         }catch(IOException io){
             Log.e("asyncTask.findIp", io.toString());
         }
-        String[] _names = {hostName, externalHostName};
-        return _names;
+        return hostName;
     }
 
     private String getExternalHostName(String hostName, int port){

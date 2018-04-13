@@ -5,6 +5,7 @@ import android.content.Context;
 import android.content.res.Configuration;
 import android.content.res.Resources;
 import android.graphics.Color;
+import android.icu.text.UnicodeSetSpanner;
 import android.net.ConnectivityManager;
 import android.os.AsyncTask;
 import android.support.v7.app.AppCompatActivity;
@@ -42,14 +43,13 @@ public class MusicPage extends AppCompatActivity implements onComplete, Sideview
     private ArrayList<Song> _songList;
     private ArrayList<TableRow> _songRow;
     private SocketConnection _connection;
+    private Context room = this;
 
 
-    private String[] hostNames = new String[2];
+    private String hostName;
     private String port = "14123";
 
     private ViewGroup selectedSong;
-
-
 
     private boolean needSongs;
     private onComplete postExecute = this;
@@ -65,11 +65,11 @@ public class MusicPage extends AppCompatActivity implements onComplete, Sideview
 
         _connection = getSocket();
 
-        hostNames = extractIp();
-        if(hostNames[0].equals("INVALID") && hostNames[1].equals("INVALID")){
+        hostName = extractIp();
+        if(hostName.equals("INVALID")){
             _connection.executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR, "false", port, "stat");
         }else{
-            _connection.executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR, "true", port, "stat", hostNames[0], hostNames[1]);
+            _connection.executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR, "true", port, "stat", hostName);
         }
     }
 
@@ -77,7 +77,7 @@ public class MusicPage extends AppCompatActivity implements onComplete, Sideview
     private void playSong(Song song, View view){
         currentPlaying = song.getSongId();
         _connection = getSocket();
-        _connection.executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR, "true", port, "play "+song.getFileName(), hostNames[0], hostNames[1]);
+        _connection.executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR, "true", port, "play "+song.getFileName(), hostName);
     }
 
     public void changeCurrentSongPlayingDisplay(Song song, View view){
@@ -146,9 +146,11 @@ public class MusicPage extends AppCompatActivity implements onComplete, Sideview
 
         TextView songArtist = new TextView(MusicPage.this);
         LinearLayout.LayoutParams artistLayout = new LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
-        songArtist.setText(song.getArtist());
+        songArtist.setText(song.getArtist()+" - "+song.getAlbum());
         songArtist.setTextSize(15);
         songArtist.setTextColor(Color.BLACK);
+        songArtist.setSingleLine(true);
+        songArtist.setEllipsize(TextUtils.TruncateAt.END);
         songArtist.setLayoutParams(artistLayout);
 
         songInfo.addView(songTitle);
@@ -182,10 +184,10 @@ public class MusicPage extends AppCompatActivity implements onComplete, Sideview
         TextView playButton = (TextView)findViewById(R.id.musicControl);
         _connection = getSocket();
         if(!isPlaying) {
-            _connection.executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR, "true", port, "resume", hostNames[0], hostNames[1]);
+            _connection.executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR, "true", port, "resume", hostName);
             playButton.setText(R.string.pause);
         }else {
-            _connection.executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR, "true", port, "pause", hostNames[0], hostNames[1]);
+            _connection.executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR, "true", port, "pause", hostName);
             playButton.setText(R.string.play_arrow);
         }
         isPlaying = !isPlaying;
@@ -195,7 +197,7 @@ public class MusicPage extends AppCompatActivity implements onComplete, Sideview
 
     public void getCurrentSongPalying(){
         _connection = getSocket();
-        _connection.executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR, "true", port, "getCurrentSong", hostNames[0], hostNames[1]);
+        _connection.executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR, "true", port, "getCurrentSong", hostName);
     }
 
     @Override
@@ -204,12 +206,12 @@ public class MusicPage extends AppCompatActivity implements onComplete, Sideview
         if(keyCode == KeyEvent.KEYCODE_VOLUME_DOWN){
             //TODO: change volumes of speaker BRING IT DOWN
             _connection = getSocket();
-            _connection.executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR, "true", port, "decVolume", hostNames[0], hostNames[1]);
+            _connection.executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR, "true", port, "decVolume", hostName);
         }
         if(keyCode == KeyEvent.KEYCODE_VOLUME_UP){
             //TODO: change volumes of speaker RISE IT UP
             _connection = getSocket();
-            _connection.executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR, "true", port, "incVolume", hostNames[0], hostNames[1]);
+            _connection.executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR, "true", port, "incVolume", hostName);
 
         }
         if(keyCode == KeyEvent.KEYCODE_BACK){
@@ -239,19 +241,27 @@ public class MusicPage extends AppCompatActivity implements onComplete, Sideview
     @Override
     public void onConnectAttempt(String[] res){
         TextView statusConnection = (TextView) findViewById(R.id.statusDisplay);
-        if(res[0].equals("INVALID") && res[1].equals("INVALID")){
+        if(res[0].equals("INVALID")){
             statusConnection.setText("status: Disconnected");
         }else{
-            if(res[2].equals("getSongList")){
-                if(res.length > 4) {
+            if(res[1].equals("getSongList")){
+                if(res.length > 3) {
+
                     _songList = new ArrayList<>();
                     _songRow = new ArrayList<>();
-                    for (int i = 4; i < res.length; i++){
+
+                    Song.resetSongCount();
+                    TableLayout  tb = (TableLayout)findViewById(R.id.songList);
+                    tb.removeAllViews();
+                    for (int i = 3; i < res.length; i++){
                         String[] songInfo = splitUnitSeparator(res[i]);
                         if(songInfo.length == 0) continue;
                         if(songInfo.length == 1 && (songInfo[0].equals("")||songInfo[0].equals(" ")))
                             continue;
-                        if(songInfo.length >= 3){
+                        else if(songInfo.length >= 4){
+                            addToSongList(new Song(songInfo[0], songInfo[1], songInfo[2], songInfo[3]));
+                        }
+                        else if(songInfo.length >= 3){
                             addToSongList(new Song(songInfo[0], songInfo[1], songInfo[2]));
                         }else if(songInfo.length >= 2){
                             addToSongList(new Song(songInfo[0], songInfo[1]));
@@ -261,20 +271,22 @@ public class MusicPage extends AppCompatActivity implements onComplete, Sideview
                     }
                     getCurrentSongPalying();
                 }
-            }else if(res[2].contains("play")){
-                if(res[3].equals("true")){
-                    isPlaying = true;
-                    Song toPlay = _songList.get(currentPlaying);
-                    changeCurrentSongPlayingDisplay(toPlay, _songRow.get(toPlay.getSongId()));
+            }else if(res[1].contains("play")){
+                if(res.length > 2) {
+                    if (res[2].equals("true")) {
+                        isPlaying = true;
+                        Song toPlay = _songList.get(currentPlaying);
+                        changeCurrentSongPlayingDisplay(toPlay, _songRow.get(toPlay.getSongId()));
+                    }
                 }
 
-            }else if(res[2].equals("getCurrentSong")){
-                if(res[3].equals("true")) {
+            }else if(res[1].equals("getCurrentSong")){
+                if(res[2].equals("true")) {
                     isPlaying = true;
                     TextView playButton = (TextView)findViewById(R.id.musicControl);
                     playButton.setText(R.string.pause);
                     for (Song s : _songList) {
-                        if (s.getFileName().equals(res[4])) {
+                        if ((s.getFileName().trim()).equals(res[3])) {
                             currentPlaying = s.getSongId();
                             changeCurrentSongPlayingDisplay(s, _songRow.get(s.getSongId()));
                             break;
@@ -284,13 +296,13 @@ public class MusicPage extends AppCompatActivity implements onComplete, Sideview
                     TextView songBanner = (TextView) findViewById(R.id.currentPlayingBanner);
                     songBanner.setText("Not Playing Anything");
                 }
-            }else if(res[2].equals("getSpeakerList")){
+            }else if(res[1].equals("getSpeakerList")){
 
             }
             statusConnection.setText("status: Connected");
         }
-        hostNames=new String[]{res[0], res[1]};
-        saveIp(res[0], res[1]);
+        hostName=res[0];
+        saveIp(res[0]);
         if(needSongs){
             fetchSongList();
         }
@@ -316,25 +328,24 @@ public class MusicPage extends AppCompatActivity implements onComplete, Sideview
     private void fetchSongList(){
         needSongs = false;
         _connection = getSocket();
-        _connection.executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR, "true", port, "getSongList", hostNames[0], hostNames[1]);
+        _connection.executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR, "true", port, "getSongList", hostName);
     }
     /**
      * this function will save the ip and external ip names to
      * an internal file on the contex's directory.
      *
      * @param ip - the ip given to the server being connected to
-     * @param exIp - the router's port 14123 forwarded ip name.
      */
-    private void saveIp(String ip, String exIp){
+    private void saveIp(String ip){
         try{
             Context _context = this;
             FileOutputStream _out = _context.openFileOutput("ip.src", Context.MODE_PRIVATE);
-            byte[] ipData = combineArray(ip.getBytes(), exIp.getBytes());
+            byte[] ipData = ip.getBytes();
             _out.write(ipData);
             _out.close();
         }catch(Exception e){
             Log.e("SAVE IP", e.toString());
-            createNewFile(ip, exIp);
+            createNewFile(ip);
         }
     }
 
@@ -344,16 +355,15 @@ public class MusicPage extends AppCompatActivity implements onComplete, Sideview
      * 2) save the ip data strings (ip and exIp) to the file.
      *
      * @param ip - the ip given to the server being connected to
-     * @param exIp - the router's port 14123 forwarded ip name.
      */
-    private void createNewFile(String ip, String exIp){
+    private void createNewFile(String ip){
         try{
             Context _context = this;
             File directory = _context.getFilesDir();
             File file = new File(directory, "ip.src");
             file.setWritable(true);
             FileOutputStream _out = _context.openFileOutput("ip.src", Context.MODE_PRIVATE);
-            byte[] ipData = combineArray(ip.getBytes(), exIp.getBytes());
+            byte[] ipData = ip.getBytes();
             _out.write(ipData);
             _out.close();
         }catch(Exception e){
@@ -365,9 +375,8 @@ public class MusicPage extends AppCompatActivity implements onComplete, Sideview
      * extract the ip names stored inside the application context.
      * @return  String[] - local ip address, external ip address, (respectively)
      */
-    private String[] extractIp(){
+    private String extractIp(){
         StringBuilder ipName = new StringBuilder();
-        StringBuilder externalIpName = new StringBuilder();
         try{
             Context _context = this;
             FileInputStream _in = _context.openFileInput("ip.src");
@@ -377,43 +386,17 @@ public class MusicPage extends AppCompatActivity implements onComplete, Sideview
                 if(data != '\n' && data != -1) ipName.append((char) data);
                 else break;
             }
-            while(true){
-                int data = _in.read();
-                if(data != -1) externalIpName.append((char) data);
-                else break;
-            }
-            String[] names = {ipName.toString(), externalIpName.toString()};
-            return names;
-        }catch(Exception e){
-            String[] names = {"INVALID", "INVALID"};
-            return names;
-        }
-    }
 
-    /**
-     * This will take two saved data from context
-     *  - hostName = save data
-     * and will combine the bytes into a string to be displayed.
-     *
-     * @param a - hostName[0] == localIp
-     * @param b = hostName[1] == externalIp
-     * @return  the combined byte of localIp & externalIp.
-     */
-    private byte[] combineArray(byte[] a, byte[] b){
-        byte[] newData = new byte[a.length+b.length+1];
-        for(int i = 0; i < a.length; i++){
-            newData[i] = a[i];
+            return ipName.toString();
+        }catch(Exception e){
+            return "INVALID";
         }
-        newData[a.length] = '\n';
-        for(int i = 0; i < b.length; i++){
-            newData[i+a.length+1] = b[i];
-        }
-        return newData;
     }
 
     public void refreshConnection(View view) {
+        Song.resetSongCount();
         _connection = getSocket();
-        _connection.executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR, "false", port, "stat");
+        _connection.executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR, "false", port, "getSongList");
     }
 
     private SocketConnection getSocket(){
