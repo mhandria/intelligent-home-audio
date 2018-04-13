@@ -264,10 +264,12 @@ def enableSpeaker(spkr_enum):
             sharedMem.speakerEnables.update({spkr_num : True})
 
             # when a speakers is connected, clear the buffers so that they are synced #
-            pauseSong()
-            time.sleep(2)
-            resumeSong()
-
+            if(sharedMem.isSendingSong):
+                pauseSong()
+                time.sleep(2)
+                resumeSong()
+            #endif
+            
             returnPayload = ACK
         else:
             returnPayload = NAK + 'Invalid speaker enumerator: "' + str(spkr_enum) + '"'

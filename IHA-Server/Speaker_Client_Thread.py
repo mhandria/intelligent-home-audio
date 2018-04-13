@@ -16,6 +16,7 @@ def returnMessage(payload, spkn, client):
 #end returnMessage
 
 def Speaker_Client(client, spkn, addr):
+    global isSendingSong
     # initialize variables for this file
 
     print('')
@@ -23,9 +24,13 @@ def Speaker_Client(client, spkn, addr):
 
     client.setblocking(0)
 
+    wasPaused = True
     # when a speakers is connected, clear the buffers so that they are synced #
-    pauseSong()
-    
+    if(sharedMem.isSendingSong):
+        wasPaused = False
+        sharedMem.isSendingSong = False
+    #endif
+
     #enter loop for handling client
     try:
         while(sharedMem.aliveSpeakers[spkn]):
@@ -44,7 +49,9 @@ def Speaker_Client(client, spkn, addr):
                 print('Speaker - TCP Client #{0} Payload:  {1}'.format(spkn,data))
                 returnMessage('y', spkn, client)
                 time.sleep(0.5)
-                resumeSong()
+                if not wasPaused:
+                    sharedMem.isSendingSong = True
+                #endif
             #endif
             
             # repeat forever
