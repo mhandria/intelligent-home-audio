@@ -5,9 +5,12 @@ import android.content.Context;
 import android.content.res.Configuration;
 import android.content.res.Resources;
 import android.graphics.Color;
+import android.graphics.Typeface;
 import android.icu.text.UnicodeSetSpanner;
 import android.net.ConnectivityManager;
 import android.os.AsyncTask;
+import android.support.design.widget.TabLayout;
+import android.support.v4.content.res.ResourcesCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.text.Layout;
@@ -34,6 +37,7 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.lang.reflect.Array;
+import java.lang.reflect.Type;
 import java.util.ArrayList;
 
 public class MusicPage extends AppCompatActivity implements onComplete, SideviewControl{
@@ -44,6 +48,8 @@ public class MusicPage extends AppCompatActivity implements onComplete, Sideview
     private ArrayList<TableRow> _songRow;
     private SocketConnection _connection;
     private Context room = this;
+
+    private Typeface icon;
 
 
     private String hostName;
@@ -64,7 +70,7 @@ public class MusicPage extends AppCompatActivity implements onComplete, Sideview
         needSongs = true;
 
         _connection = getSocket();
-
+        icon = getResources().getFont(R.font.icon);
         hostName = extractIp();
         if(hostName.equals("INVALID")){
             _connection.executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR, "false", port, "stat");
@@ -181,18 +187,21 @@ public class MusicPage extends AppCompatActivity implements onComplete, Sideview
      * @param view
      */
     public void playPauseMusic(View view){
-        TextView playButton = (TextView)findViewById(R.id.musicControl);
         _connection = getSocket();
         if(!isPlaying) {
             _connection.executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR, "true", port, "resume", hostName);
-            playButton.setText(R.string.pause);
         }else {
             _connection.executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR, "true", port, "pause", hostName);
-            playButton.setText(R.string.play_arrow);
         }
-        isPlaying = !isPlaying;
     }
 
+    public void updateMusicControl(){
+
+        TextView playButton = (TextView)findViewById(R.id.musicControl);
+        if(!isPlaying) playButton.setText(R.string.pause);
+        else           playButton.setText(R.string.play_arrow);
+        isPlaying = !isPlaying;
+    }
 
 
     public void getCurrentSongPalying(){
@@ -296,8 +305,27 @@ public class MusicPage extends AppCompatActivity implements onComplete, Sideview
                     TextView songBanner = (TextView) findViewById(R.id.currentPlayingBanner);
                     songBanner.setText("Not Playing Anything");
                 }
-            }else if(res[1].equals("getSpeakerList")){
-
+            }else if(res[1].equals("getSpeakerListd") || res[1].equals("getSpeakerList")){
+                if(res.length > 3){
+                    TableLayout speakerList = (TableLayout)findViewById(R.id.speakerList);
+                    speakerList.removeAllViews();
+                    for(int i = 3; i < res.length; i++){
+                        try {
+                            String[] speakerInfo = res[i].split(":");
+                            if(speakerInfo[1].equals("n")) continue;
+                            int status = (speakerInfo[2].equals("y")) ? 1 : 0;
+                            populateSpeakerList(new Speaker(speakerInfo[0], status));
+                        }catch(IndexOutOfBoundsException io){
+                            continue;
+                        }
+                    }
+                }
+                LinearLayout sidenav = (LinearLayout)findViewById(R.id.sidenav);
+                sidenav.setVisibility(View.VISIBLE);
+            }else if(res[1].equals("resume") || res[1].equals("pause")){
+                if(res[2].equals("true")){
+                    updateMusicControl();
+                }
             }
             statusConnection.setText("status: Connected");
         }
@@ -313,11 +341,56 @@ public class MusicPage extends AppCompatActivity implements onComplete, Sideview
     public void onTaskComplete(){
     }
 
-
     @Override
     public void onSideviewOpen(View view){
-        LinearLayout sidenav = (LinearLayout)findViewById(R.id.sidenav);
-        sidenav.setVisibility(View.VISIBLE);
+        _connection = getSocket();
+        _connection.executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR, "true", port, "getSpeakerList", hostName);
+    }
+
+    @Override
+    public void populateSpeakerList(final Speaker speaker){
+        TableLayout tableLayout = (TableLayout)findViewById(R.id.speakerList);
+        TableRow row = new TableRow(MusicPage.this);
+        TableLayout.LayoutParams layoutParams = new TableLayout.LayoutParams(TableLayout.LayoutParams.MATCH_PARENT, TableLayout.LayoutParams.WRAP_CONTENT);
+        layoutParams.setMargins(convertDpToPixel(10), convertDpToPixel(10), convertDpToPixel(10), convertDpToPixel(10));
+        row.setBackgroundColor(Color.WHITE);
+        row.setGravity(Gravity.CENTER);
+        row.setLayoutParams(layoutParams);
+
+        TextView speakerIcon = new TextView(MusicPage.this);
+        TableRow.LayoutParams iconLayout = new TableRow.LayoutParams(TableRow.LayoutParams.WRAP_CONTENT, TableRow.LayoutParams.WRAP_CONTENT);
+        iconLayout.setMargins(0, 0, convertDpToPixel(10), 0);
+        speakerIcon.setLayoutParams(iconLayout);
+        speakerIcon.setTypeface(icon);
+        speakerIcon.setTextSize(30);
+        speakerIcon.setTextColor(speaker.getStatusColor());
+        speakerIcon.setText(getResources().getText(R.string.speaker));
+
+        TextView speakerInfo = new TextView(MusicPage.this);
+        TableRow.LayoutParams infoLayout = new TableRow.LayoutParams(TableRow.LayoutParams.WRAP_CONTENT, TableRow.LayoutParams.WRAP_CONTENT);
+        speakerInfo.setLayoutParams(infoLayout);
+        speakerInfo.setTextColor(Color.BLACK);
+        speakerInfo.setText("Speaker #"+speaker.speakerId);
+        speakerInfo.setTextSize(20);
+
+        row.addView(speakerIcon);
+        row.addView(speakerInfo);
+        row.setOnClickListener(new View.OnClickListener(){
+            @Override
+            public void onClick(View view){
+                _connection = getSocket();
+                final Speaker _speaker = speaker;
+                if(_speaker.getStatusColor() == Color.RED){
+                    _connection.executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR, "true", port, "enableSpeaker "+_speaker.getSpeakerId(), hostName);
+                }else{
+                    _connection.executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR, "true", port, "disableSpeaker "+_speaker.getSpeakerId(), hostName);
+                }
+                _speaker.toggleStat();
+                TextView speakerIcon = (TextView)((ViewGroup)view).getChildAt(0);
+                speakerIcon.setTextColor(_speaker.getStatusColor());
+            }
+        });
+        tableLayout.addView(row);
     }
     @Override
     public void onSideviewClose(View view){

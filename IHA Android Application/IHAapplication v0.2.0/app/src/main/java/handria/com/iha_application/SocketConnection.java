@@ -140,8 +140,9 @@ public class SocketConnection extends AsyncTask<String, String, String[]> {
     }
 
     private ArrayList<String> sendCmd(String hostName, int port, String cmd){
+        boolean validResponse = false;
         ArrayList<String> res = new ArrayList<>();
-
+        res.add("false");
         if(cmd.equals("")){
             res.add("No CMD sent");
             return res;
@@ -173,7 +174,10 @@ public class SocketConnection extends AsyncTask<String, String, String[]> {
                     boolean endOfSong = false;
                     boolean endOfSongDetect = endOfSong;
                     for(char c: currentData.toCharArray()){
-                        if(c == ACK) continue;
+                        if(c == ACK){
+                            validResponse = true;
+                            continue;
+                        }
                         finishTx = c == EOT;
                         //check endSong in the data String
                         //determine when the nextSongInfo starts up again.
@@ -195,7 +199,23 @@ public class SocketConnection extends AsyncTask<String, String, String[]> {
 
                     }
                 }
-            }else {
+            }else if(cmd.equals("getSpeakerListd") || cmd.equals("getSpeakerList")){
+                out.println(cmd);
+                long endTimeMillis = System.currentTimeMillis() + 10000;
+                while(!buffRead.ready()){
+                    if(System.currentTimeMillis() >= endTimeMillis){
+                        status = false;
+                        break;
+                    }
+                    if(this.isCancelled()) return res;
+                }
+                if(!status) return res;
+                String[] speakerList = buffRead.readLine().split(";");
+                for(String s: speakerList){
+                    res.add(s);
+                }
+                validResponse = true;
+            }else{
                 out.println(cmd);
                 if(!cmd.equals("stat")) {
                     long endTimeMillis = System.currentTimeMillis() + 10000;
@@ -208,16 +228,12 @@ public class SocketConnection extends AsyncTask<String, String, String[]> {
                     }
                     if(!status) return res;
                     //int ResponseCheck = buffRead.read();
-                    if (buffRead.read() == ACK) {
-                        res.add("true");
-                        res.add(buffRead.readLine());
-                    } else {
-                        res.add("false");
-                        res.add(buffRead.readLine());
+                    validResponse = (buffRead.read() == ACK);
+                    res.add(buffRead.readLine());
 
-                    }
                 }
             }
+            if(validResponse) res.set(0, "true");
             socket.close();
         }catch(IOException ex) {
             res.add("INVALID CONNECTION");
@@ -251,7 +267,7 @@ public class SocketConnection extends AsyncTask<String, String, String[]> {
                 if(this.isCancelled()){
                     return hostName;
                 }
-                //String testIp = "192.168.1."+String.valueOf(i);
+                //SString testIp = "192.168.1."+String.valueOf(i);
                 publishProgress("Pinging: "+testIp);
                 InetAddress address = InetAddress.getByName(testIp);
                 boolean reachable = address.isReachable(1000);
