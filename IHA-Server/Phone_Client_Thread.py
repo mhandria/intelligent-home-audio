@@ -226,6 +226,32 @@ def getSpeakerList(client):
     return returnPayload
 #end getSpeakerList
 
+def getSpeakerListd(client):
+    
+    # this should display green
+    payload = '0' + ':' + 'y' + ':' + 'y'+  ';'
+    print(payload)
+    client.send(payload.encode('utf-8'))
+    
+    # this should not display
+    payload = '1' + ':' + 'n' + ':' + 'y'+  ';'
+    print(payload)
+    client.send(payload.encode('utf-8'))
+
+    # this should display red
+    payload = '2' + ':' + 'y' + ':' + 'n'+  ';'
+    print(payload)
+    client.send(payload.encode('utf-8'))
+
+    # this should not display
+    payload = '3' + ':' + 'n' + ':' + 'n'+  ';'
+    print(payload)
+    client.send(payload.encode('utf-8'))
+
+    returnPayload = EOT
+    return returnPayload
+#end getSpeakerList
+
 def enableSpeaker(spkr_enum):
     global speakerEnables
     global speakerEnumeration
@@ -476,6 +502,8 @@ def Phone_Client(ADDR):
                 payload = getCurrentSong()
             elif(data == 'getSpeakerList'):
                 payload = getSpeakerList(phone_client_sock)
+            elif(data == 'getSpeakerListd'):
+                payload = getSpeakerListd(phone_client_sock)
             elif(data.startswith('enableSpeaker ')):
                 speakerEnum = data.split(' ',1)[1] #parse <speakerNumber>
                 speakerEnum =  int(speakerEnum)

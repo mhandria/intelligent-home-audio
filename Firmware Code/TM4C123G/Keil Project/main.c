@@ -323,7 +323,7 @@ void SysTick_Handler(void)
 	writeDAC(upper, lower);
 	
 	// If we're running low on samples, request some more //
-	if(getPtrDifference() < 25000 && ticksSinceLastRequest > 1300)
+	if(getPtrDifference() < 7000 && ticksSinceLastRequest > 1300)
 	{ 
 		UART1_SendChar('s');
 		ticksSinceLastRequest = 0;
