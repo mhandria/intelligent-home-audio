@@ -1,215 +1,231 @@
 package handria.com.iha_application;
 
 import android.content.Context;
-import android.net.ConnectivityManager;
-import android.net.NetworkInfo;
-import android.net.wifi.WifiInfo;
+import android.graphics.Color;
 import android.net.wifi.WifiManager;
 import android.os.AsyncTask;
 import android.text.format.Formatter;
 import android.util.Log;
-import android.view.Display;
+import android.view.View;
+import android.view.ViewGroup;
+import android.widget.FrameLayout;
+import android.widget.LinearLayout;
+import android.widget.ProgressBar;
+import android.widget.TextView;
 
 import java.io.BufferedReader;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.lang.ref.WeakReference;
+import java.lang.reflect.Array;
 import java.net.InetAddress;
-import java.net.NetworkInterface;
+import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.net.UnknownHostException;
-import java.nio.channels.SocketChannel;
-import java.nio.file.Files;
 import java.util.ArrayList;
-import java.util.Enumeration;
+import java.util.Arrays;
+import java.util.concurrent.TimeUnit;
 
-import static android.content.Context.MODE_PRIVATE;
 import static android.content.Context.WIFI_SERVICE;
 
 /**
- * Created by Handria on 2/27/18.
+ * Created by michaelhandria on 4/8/18.
  */
 
-public class SocketConnection extends AsyncTask<String, Void, String[]> {
+public class SocketConnection extends AsyncTask<String, String, String[]> {
 
     private onComplete then;
     WeakReference<Context> _mContextRef;
-    private String fileName;
-    private Socket _socket;
+    private FrameLayout layout;
+    private ProgressBar loadBar;
+    private TextView txtProgress;
+    private LinearLayout homeView;
+    private final int EOT = 4;
+    private final int ACK = 6;
 
-    SocketConnection(onComplete then, Context _context){
-        this.then = then;
+
+    SocketConnection(onComplete _then, Context _context, FrameLayout _frame, ProgressBar _prog, TextView _stat, LinearLayout _rootView){
+        then = _then;
         _mContextRef = new WeakReference<>(_context);
-        fileName = "ip.src";
+        layout = _frame;
+        loadBar = _prog;
+        txtProgress = _stat;
+        homeView = _rootView;
+    }
+
+    @Override
+    protected void onCancelled(String... result){
+        homeView.setVisibility(View.VISIBLE);
+        layout.setBackgroundColor(Color.TRANSPARENT);
+        loadBar.setVisibility(View.INVISIBLE);
+        txtProgress.setVisibility(View.INVISIBLE);
+    }
+
+
+    @Override
+    protected void onPostExecute(String[] res){
+        homeView.setVisibility(View.VISIBLE);
+        layout.setBackgroundColor(Color.TRANSPARENT);
+        loadBar.setVisibility(View.INVISIBLE);
+        txtProgress.setVisibility(View.INVISIBLE);
+        then.onConnectAttempt(res);
+    }
+
+    @Override
+    protected void onProgressUpdate(String... disp){
+        loadBar.setVisibility(View.VISIBLE);
+        loadBar.animate();
+        txtProgress.setVisibility(View.VISIBLE);
+        txtProgress.setText("Loading...");
+        homeView.setVisibility(View.INVISIBLE);
+        txtProgress.setText(disp[0]);
     }
 
     @Override
     protected String[] doInBackground(String... params){
-        String[] info = {"", "", ""};
+        int port = Integer.parseInt(params[1]);
+        String cmd = params[2];
+        String hostName;
+        ArrayList<String> response = new ArrayList<>();
+        if(params[0].equals("true")){
+            hostName = params[3];
+        }else{
+            hostName = findIp(port);
+        }
+        response.add(hostName);
+        response.add(cmd);
+        try{
+            TimeUnit.MILLISECONDS.sleep(100);
+        }catch(Exception e){
+            Log.e("TIMEOUT FAILURE", "the sleep failed to setup");
+        }
+        response.addAll(sendCmd(hostName, port, cmd, false));
+        //insert old ifelse statement here if above doesn't work properly.
+        return response.toArray(new String[response.size()]);
+    }
+
+
+
+    private String testConnection(String hostNames){
+        String correctHost = "";
+        //nested try catch to attempt socket connection.
         try {
-            int port = Integer.parseInt(params[0]);
-            String msg = params[1];
-            boolean firstConnect = params[2].equals("true");
+            InetAddress address = InetAddress.getByName(hostNames);
+            boolean reachable = address.isReachable(1000);
+            if(reachable)
+                correctHost = hostNames;
+            else
+                throw new Exception();
+        }catch(Exception locSocket){
+            Log.e("Socket Attempt", "local host socket failed");
+        }
+        return correctHost;
+    }
 
-            //hostName[0] - local ip
-            //hostName[1] - external ip
-            String[] hostNames = extractIp();
-            if(msg.equals("stat") && firstConnect) {
-                //if the previous hostNames were both stored as INVALID
-                //that means that the previous ip scan was unable to get any
-                //available ip in the local network.
-                if(hostNames[1].equals("INVALID") && hostNames[0].equals("INVALID")){
-                    hostNames = findIp(port);
-                    saveIp(hostNames[0], hostNames[1]);
-                }
+    private ArrayList<String> sendCmd(String hostName, int port, String cmd, boolean triedOnce){
+        boolean validResponse = false;
+        ArrayList<String> res = new ArrayList<>();
+        res.add("false");
+        if(cmd.equals("")){
+            res.add("No CMD sent");
+            return res;
+        }
+        try {
+            Socket socket = new Socket(hostName, port);
+            BufferedReader buffRead = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+            PrintWriter out = new PrintWriter(socket.getOutputStream(), true);
+            boolean status = true;
+            if(cmd.equals("getSongList")) {
+                publishProgress("fetching songs");
+                boolean finishTx = false;
+                while (!finishTx) {
+                    out.println(cmd);
+                    long endTimeMillis = System.currentTimeMillis() + 10000;
 
-                //now we try to connect to the socket to check if it
-                //is valid or not.
-                try {
-                    if (hostNames[0].equals("INVALID")) {
-                        _socket = new Socket(hostNames[1], port);
-                    } else {
-                        _socket = new Socket(hostNames[0], port);
-                        if (!testExternalHost(_socket)) {
-                            _socket = new Socket(hostNames[1], port);
-                        } else {
-                            _socket = new Socket(hostNames[0], port);
+                    while(!buffRead.ready()){
+                        if(System.currentTimeMillis() >= endTimeMillis){
+                            status = false;
+                            break;
                         }
+                        if(this.isCancelled()) return res;
                     }
-                } catch (Exception e) {
-                    hostNames = findIp(port);
-                    saveIp(hostNames[0], hostNames[1]);
-                    try {
-                        _socket = new Socket(hostNames[0], port);
-                    }catch(Exception eInternal){
-                        Log.e("CONNECTION ATTEMPT", "attempted to connect to socket hostName[0], but failed");
-                        _socket = new Socket(hostNames[1], port);
+                    if(!status) return res;
+                    String currentData = buffRead.readLine();
+                    StringBuilder songName = new StringBuilder();
+                    boolean endOfSong = false;
+                    boolean endOfSongDetect = endOfSong;
+                    for(char c: currentData.toCharArray()){
+                        if(c == ACK){
+                            validResponse = true;
+                            continue;
+                        }
+                        finishTx = c == EOT;
+                        //check endSong in the data String
+                        //determine when the nextSongInfo starts up again.
+                        endOfSong = (c == 29 || c == 0);
+
+                        //refresh string builder
+                        //save the song derived from the data String.
+                        if(!endOfSongDetect && endOfSong){
+                            if(songName.length() != 0) res.add(songName.toString());
+                            songName = new StringBuilder();
+                        }
+
+                        //if the end of the song has not been reached
+                        //keep appending to string builder.
+                        if(!endOfSong){
+                            songName.append(c);
+                        }
+                        endOfSongDetect = endOfSong;
+
                     }
-                    if (!testExternalHost(_socket)) {
-                        _socket = new Socket(hostNames[1], port);
-                    } else {
-                        _socket = new Socket(hostNames[0], port);
+                }
+            }else if(cmd.equals("getSpeakerListd") || cmd.equals("getSpeakerList")){
+                out.println(cmd);
+                long endTimeMillis = System.currentTimeMillis() + 10000;
+                while(!buffRead.ready()){
+                    if(System.currentTimeMillis() >= endTimeMillis){
+                        status = false;
+                        break;
                     }
+                    if(this.isCancelled()) return res;
+                }
+                if(!status) return res;
+                if(buffRead.read() == ACK){
+                    String[] speakerList = buffRead.readLine().split(";");
+                    res.addAll(Arrays.asList(speakerList));
+                    validResponse = true;
                 }
             }else{
-                _socket = new Socket(hostNames[0], port);
+                out.println(cmd);
+                if(!cmd.equals("stat")) {
+                    long endTimeMillis = System.currentTimeMillis() + 10000;
+                    while (!buffRead.ready()) {
+                        if(System.currentTimeMillis() >= endTimeMillis){
+                            status = false;
+                            break;
+                        }
+                        if (this.isCancelled()) return res;
+                    }
+                    if(!status) return res;
+                    //int ResponseCheck = buffRead.read();
+                    validResponse = (buffRead.read() == ACK);
+                    res.add(buffRead.readLine());
+
+                }
             }
-            //send the commands to the server here.
-            BufferedReader buffRead = new BufferedReader(new InputStreamReader(_socket.getInputStream()));
-            PrintWriter out = new PrintWriter(_socket.getOutputStream(), true);
-
-            out.println(msg);
-            while(!buffRead.ready());
-            String response = buffRead.readLine();
-            _socket.close();
-<<<<<<< HEAD
-            return response;
-=======
-            info[2] = response;
-            info[0] = hostNames[0];
-            info[1] = hostNames[1];
->>>>>>> 38784779413cb074a39f87c81395e2be68c5be67
-        }catch(IndexOutOfBoundsException iob){
-            Log.e("CONNECTION", "not enough params...");
-            info[2] = "error something wrong with connection";
-        }catch(IOException e){
-
-            Log.e("CONNECTION", "failed to connect to socket");
-            info[2] = "failed to connect";
+            if(validResponse) res.set(0, "true");
+            socket.close();
+        }catch(IOException ex) {
+            if(!triedOnce)
+                res = sendCmd(findIp(port), port, cmd, true);
+            else
+                res.add("ERROR:INVALID_CONNECTION");
         }catch(Exception e){
-
-            Log.e("PARAMETER", "failed to grab param");
-            info[2] = "failed";
+            Log.e("Sending Cmd", "Something went wrong when trying to send a command");
         }
-        return info;
-    }
-
-    @Override
-    protected void onCancelled() {
-        super.onCancelled();
-        try {
-            if (_socket != null)
-                _socket.close();
-        }catch(Exception e){
-            Log.d("Cancel AsyncTask", "tried closing any sockets out there but exception thrown");
-        }
-    }
-
-    /**
-     * this function will save the ip and external ip names to
-     * an internal file on the contex's directory.
-     *
-     * @param ip - the ip given to the server being connected to
-     * @param exIp - the router's port 14123 forwarded ip name.
-     */
-    private void saveIp(String ip, String exIp){
-        try{
-            Context _context = _mContextRef.get();
-            FileOutputStream _out = _context.openFileOutput("ip.src", Context.MODE_PRIVATE);
-            byte[] ipData = combineArray(ip.getBytes(), exIp.getBytes());
-            _out.write(ipData);
-            _out.close();
-        }catch(Exception e){
-            Log.e("SAVE IP", e.toString());
-            createNewFile(ip, exIp);
-        }
-    }
-
-    /**
-     * This function will
-     * 1) create a new file to save ip data strings into
-     * 2) save the ip data strings (ip and exIp) to the file.
-     *
-     * @param ip - the ip given to the server being connected to
-     * @param exIp - the router's port 14123 forwarded ip name.
-     */
-    private void createNewFile(String ip, String exIp){
-        try{
-            Context _context = _mContextRef.get();
-            File directory = _context.getFilesDir();
-            File file = new File(directory, "ip.src");
-            file.setWritable(true);
-            FileOutputStream _out = _context.openFileOutput("ip.src", Context.MODE_PRIVATE);
-            byte[] ipData = combineArray(ip.getBytes(), exIp.getBytes());
-            _out.write(ipData);
-            _out.close();
-        }catch(Exception e){
-            Log.e("WRITE FILE", e.toString());
-        }
-    }
-
-    /**
-     * extract the ip names stored inside the application context.
-     * @return  String[] - local ip address, external ip address, (respectively)
-     */
-    private String[] extractIp(){
-        StringBuilder ipName = new StringBuilder();
-        StringBuilder externalIpName = new StringBuilder();
-        try{
-            Context _context = _mContextRef.get();
-            FileInputStream _in = _context.openFileInput("ip.src");
-
-            while(true) {
-                int data = _in.read();
-                if(data != '\n' && data != -1) ipName.append((char) data);
-                else break;
-            }
-            while(true){
-                int data = _in.read();
-                if(data != -1) externalIpName.append((char) data);
-                else break;
-            }
-            String[] names = {ipName.toString(), externalIpName.toString()};
-            return names;
-        }catch(Exception e){
-            String[] names = {"INVALID", "INVALID"};
-            return names;
-        }
+        return res;
     }
 
     /**
@@ -220,27 +236,32 @@ public class SocketConnection extends AsyncTask<String, Void, String[]> {
      * @param port - 14123
      * @return  String[] - local ip address, external ip address, (respectively)
      */
-    private String[] findIp(int port){
+    private String findIp(int port){
+        publishProgress("Ping Sweep");
         String hostName = "INVALID";
-        String externalHostName = "INVALID";
         try {
             Context _context = _mContextRef.get();
             WifiManager wm = (WifiManager) _context.getApplicationContext().getSystemService(WIFI_SERVICE);
             String ip = Formatter.formatIpAddress(wm.getConnectionInfo().getIpAddress());
             String _prefix = ip.substring(0, ip.lastIndexOf('.') + 1);
 
-            for (int i = 0; i < 255; i++) {
+            for (int i = 1; i < 255; i++) {
                 //when running on an virtual machine device, comment the one below
                 //this and uncomment the other testIp.
-                String testIp = _prefix + String.valueOf(i);
-                //String testIp = "192.168.1."+String.valueOf(i);
+                //String testIp = _prefix + String.valueOf(i);
+                if(this.isCancelled()){
+                    return hostName;
+                }
+                String testIp = "192.168.1."+String.valueOf(i);
+                publishProgress("Pinging: "+testIp);
                 InetAddress address = InetAddress.getByName(testIp);
-                boolean reachable = address.isReachable(1000);
-                if (reachable) {
+                boolean reachable1 = address.isReachable(700);
+                boolean reachable2 = address.isReachable(700);
+                if (reachable1 || reachable2) {
                     try {
-                        Socket _test = new Socket(testIp, port);
+                        Socket _test = new Socket();
+                        _test.connect(new InetSocketAddress(testIp, port), 1000);
                         hostName = testIp;
-                        externalHostName = getExternalHostName(_test);
                         _test.close();
                         break;
                     } catch (Exception e) {
@@ -253,54 +274,9 @@ public class SocketConnection extends AsyncTask<String, Void, String[]> {
         }catch(IOException io){
             Log.e("asyncTask.findIp", io.toString());
         }
-        String[] names = {hostName, externalHostName};
-        return names;
+        return hostName;
     }
 
-    private byte[] combineArray(byte[] a, byte[] b){
-        byte[] newData = new byte[a.length+b.length+1];
-        for(int i = 0; i < a.length; i++){
-            newData[i] = a[i];
-        }
-        newData[a.length] = '\n';
-        for(int i = 0; i < b.length; i++){
-            newData[i+a.length+1] = b[i];
-        }
-        return newData;
-    }
 
-    private boolean testExternalHost(Socket _socket){
-        try {
-            BufferedReader buffRead = new BufferedReader(new InputStreamReader(_socket.getInputStream()));
-            PrintWriter out = new PrintWriter(_socket.getOutputStream(), true);
-            out.println("stat");
-            while (!buffRead.ready()) ;
-            String response = buffRead.readLine();
-            _socket.close();
-            return response.equals("OK");
-        }catch(IOException e){
-            Log.e("testExternalHostName", "No reachable external ip try the other ip");
-            return false;
-        }
-    }
 
-    private String getExternalHostName(Socket _socket){
-        try {
-            BufferedReader buffRead = new BufferedReader(new InputStreamReader(_socket.getInputStream()));
-            PrintWriter out = new PrintWriter(_socket.getOutputStream(), true);
-            out.println("getExtIP");
-            while (!buffRead.ready()) ;
-            String response = buffRead.readLine();
-            _socket.close();
-            return response;
-        }catch(IOException e){
-            Log.e("getExternalHostName", "COULDN'T GET EXTERNAL HOST NAME::FATAL ERROR");
-            return "";
-        }
-    }
-
-    @Override
-    protected void onPostExecute(String[] info){
-        then.onConnectAttempt(info);
-    }
 }

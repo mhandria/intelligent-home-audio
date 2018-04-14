@@ -18,12 +18,10 @@ public class LandingPage extends AppCompatActivity {
 
     public void signIn(View view) {
         //userChoice= new Intent(this, SignIn.class);
-        userChoice= new Intent(this, HomePage.class);
+        userChoice= new Intent(this, MusicPage.class);
         startActivity(userChoice);
     }
 
     public void signUp(View view) {
-        userChoice = new Intent(this, SignUp.class);
-        startActivity(userChoice);
     }
 }
