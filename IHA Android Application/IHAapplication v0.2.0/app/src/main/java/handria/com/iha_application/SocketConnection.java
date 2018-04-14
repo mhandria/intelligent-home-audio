@@ -44,6 +44,7 @@ public class SocketConnection extends AsyncTask<String, String, String[]> {
     private final int EOT = 4;
     private final int ACK = 6;
 
+
     SocketConnection(onComplete _then, Context _context, FrameLayout _frame, ProgressBar _prog, TextView _stat, LinearLayout _rootView){
         then = _then;
         _mContextRef = new WeakReference<>(_context);
@@ -87,39 +88,20 @@ public class SocketConnection extends AsyncTask<String, String, String[]> {
         String cmd = params[2];
         String hostName;
         ArrayList<String> response = new ArrayList<>();
-        response.add("INVALID");
         if(params[0].equals("true")){
             hostName = params[3];
-            String _hostName = testConnection(hostName);
-            if(_hostName.equals("")){
-                hostName = findIp(port);
-                _hostName = testConnection(hostName);
-            }
-            response.set(0, hostName);
-            response.add(cmd);
-            try{
-                TimeUnit.MILLISECONDS.sleep(50);
-            }catch(Exception e){
-
-            }
-            ArrayList<String> res = sendCmd(_hostName, port, cmd);
-            if(res.size() > 0 && res.get(0).equals("INVALID CONNECTION")){
-                response.set(0, "INVALID");
-            }else {
-                response.addAll(res);
-            }
         }else{
             hostName = findIp(port);
-            response.set(0, hostName);
-            response.add(cmd);
-            String _hostName = testConnection(hostName);
-            try{
-                TimeUnit.MILLISECONDS.sleep(50);
-            }catch(Exception e){
-
-            }
-            response.addAll(sendCmd(_hostName, port, cmd));
         }
+        response.add(hostName);
+        response.add(cmd);
+        try{
+            TimeUnit.MILLISECONDS.sleep(100);
+        }catch(Exception e){
+            Log.e("TIMEOUT FAILURE", "the sleep failed to setup");
+        }
+        response.addAll(sendCmd(hostName, port, cmd, false));
+        //insert old ifelse statement here if above doesn't work properly.
         return response.toArray(new String[response.size()]);
     }
 
@@ -141,7 +123,7 @@ public class SocketConnection extends AsyncTask<String, String, String[]> {
         return correctHost;
     }
 
-    private ArrayList<String> sendCmd(String hostName, int port, String cmd){
+    private ArrayList<String> sendCmd(String hostName, int port, String cmd, boolean triedOnce){
         boolean validResponse = false;
         ArrayList<String> res = new ArrayList<>();
         res.add("false");
@@ -149,8 +131,6 @@ public class SocketConnection extends AsyncTask<String, String, String[]> {
             res.add("No CMD sent");
             return res;
         }
-
-
         try {
             Socket socket = new Socket(hostName, port);
             BufferedReader buffRead = new BufferedReader(new InputStreamReader(socket.getInputStream()));
@@ -238,7 +218,10 @@ public class SocketConnection extends AsyncTask<String, String, String[]> {
             if(validResponse) res.set(0, "true");
             socket.close();
         }catch(IOException ex) {
-            res.add("INVALID CONNECTION");
+            if(!triedOnce)
+                res = sendCmd(findIp(port), port, cmd, true);
+            else
+                res.add("ERROR:INVALID_CONNECTION");
         }catch(Exception e){
             Log.e("Sending Cmd", "Something went wrong when trying to send a command");
         }
@@ -265,15 +248,16 @@ public class SocketConnection extends AsyncTask<String, String, String[]> {
             for (int i = 1; i < 255; i++) {
                 //when running on an virtual machine device, comment the one below
                 //this and uncomment the other testIp.
-                String testIp = _prefix + String.valueOf(i);
+                //String testIp = _prefix + String.valueOf(i);
                 if(this.isCancelled()){
                     return hostName;
                 }
-                //String testIp = "192.168.1."+String.valueOf(i);
+                String testIp = "192.168.1."+String.valueOf(i);
                 publishProgress("Pinging: "+testIp);
                 InetAddress address = InetAddress.getByName(testIp);
-                boolean reachable = address.isReachable(1000);
-                if (reachable) {
+                boolean reachable1 = address.isReachable(700);
+                boolean reachable2 = address.isReachable(700);
+                if (reachable1 || reachable2) {
                     try {
                         Socket _test = new Socket();
                         _test.connect(new InetSocketAddress(testIp, port), 1000);

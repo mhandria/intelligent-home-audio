@@ -17,7 +17,7 @@ import android.text.Layout;
 import android.text.TextUtils;
 import android.util.DisplayMetrics;
 import android.util.Log;
-import android.util.TypedValue;
+
 import android.view.Gravity;
 import android.view.KeyEvent;
 import android.view.View;
@@ -29,21 +29,19 @@ import android.widget.ProgressBar;
 import android.widget.TableLayout;
 import android.widget.TableRow;
 import android.widget.TextView;
-import android.widget.Toast;
 
-import org.w3c.dom.Text;
 
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
-import java.lang.reflect.Array;
-import java.lang.reflect.Type;
+
 import java.util.ArrayList;
 
 public class MusicPage extends AppCompatActivity implements onComplete, SideviewControl{
 
     private boolean isPlaying;
     private int currentPlaying;
+    private boolean disableSpeakerTap = false;
     private ArrayList<Song> _songList;
     private ArrayList<TableRow> _songRow;
     private SocketConnection _connection;
@@ -70,13 +68,12 @@ public class MusicPage extends AppCompatActivity implements onComplete, Sideview
         needSongs = true;
 
         _connection = getSocket();
-        //icon = getResources().getFont(R.font.icon);
         icon = ResourcesCompat.getFont(MusicPage.this, R.font.icon);
         hostName = extractIp();
         if(hostName.equals("INVALID")){
-            _connection.executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR, "false", port, "stat");
+            _connection.executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR, "false", port, "getSongList");
         }else{
-            _connection.executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR, "true", port, "stat", hostName);
+            _connection.executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR, "true", port, "getSongList", hostName);
         }
     }
 
@@ -205,7 +202,7 @@ public class MusicPage extends AppCompatActivity implements onComplete, Sideview
     }
 
 
-    public void getCurrentSongPalying(){
+    public void getCurrentSongPalying(String hostName){
         _connection = getSocket();
         _connection.executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR, "true", port, "getCurrentSong", hostName);
     }
@@ -251,9 +248,11 @@ public class MusicPage extends AppCompatActivity implements onComplete, Sideview
     @Override
     public void onConnectAttempt(String[] res){
         TextView statusConnection = (TextView) findViewById(R.id.statusDisplay);
+
         if(res[0].equals("INVALID")){
             statusConnection.setText("status: Disconnected");
         }else{
+            disableSpeakerTap = false;
             if(res[1].equals("getSongList")){
                 if(res.length > 3) {
 
@@ -279,7 +278,7 @@ public class MusicPage extends AppCompatActivity implements onComplete, Sideview
                             addToSongList(new Song(res[i]));
                         }
                     }
-                    getCurrentSongPalying();
+                    getCurrentSongPalying(res[0]);
                 }
             }else if(res[1].contains("play")){
                 if(res.length > 2) {
@@ -382,16 +381,19 @@ public class MusicPage extends AppCompatActivity implements onComplete, Sideview
         row.setOnClickListener(new View.OnClickListener(){
             @Override
             public void onClick(View view){
-                _connection = getSocket();
-                final Speaker _speaker = speaker;
-                if(_speaker.getStatusColor() == Color.RED){
-                    _connection.executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR, "true", port, "enableSpeaker "+_speaker.getSpeakerId(), hostName);
-                }else{
-                    _connection.executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR, "true", port, "disableSpeaker "+_speaker.getSpeakerId(), hostName);
+                if(!disableSpeakerTap) {
+                    _connection = getSocket();
+                    final Speaker _speaker = speaker;
+                    if (_speaker.getStatusColor() == Color.RED) {
+                        _connection.executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR, "true", port, "enableSpeaker " + _speaker.getSpeakerId(), hostName);
+                    } else {
+                        _connection.executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR, "true", port, "disableSpeaker " + _speaker.getSpeakerId(), hostName);
+                    }
+                    _speaker.toggleStat();
+                    TextView speakerIcon = (TextView) ((ViewGroup) view).getChildAt(0);
+                    speakerIcon.setTextColor(_speaker.getStatusColor());
+                    disableSpeakerTap = true;
                 }
-                _speaker.toggleStat();
-                TextView speakerIcon = (TextView)((ViewGroup)view).getChildAt(0);
-                speakerIcon.setTextColor(_speaker.getStatusColor());
             }
         });
         tableLayout.addView(row);
@@ -473,7 +475,7 @@ public class MusicPage extends AppCompatActivity implements onComplete, Sideview
     public void refreshConnection(View view) {
         Song.resetSongCount();
         _connection = getSocket();
-        _connection.executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR, "false", port, "getSongList");
+        _connection.executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR, "true", port, "getSongList", hostName);
     }
 
     private SocketConnection getSocket(){
