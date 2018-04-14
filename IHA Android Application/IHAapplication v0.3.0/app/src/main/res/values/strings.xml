@@ -1,0 +1,13 @@
+<resources>
+    <string name="app_name">I.H.A</string>
+    <string name="play_arrow">&#xE037;</string>
+    <string name="pause">&#xE034;</string>
+    <string name="skip_next">&#xE044;</string>
+    <string name="skip_previous">&#xE045;</string>
+    <string name="replay">&#xE042;</string>
+    <string name="menu">&#xE5D2;</string>
+    <string name="speaker">&#xE32D;</string>
+
+    <!-- TODO: Remove or change this placeholder text -->
+    <string name="hello_blank_fragment">Hello blank fragment</string>
+</resources>

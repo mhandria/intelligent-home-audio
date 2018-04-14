@@ -1,3 +1,10 @@
 <resources>
     <string name="app_name">IHA-application</string>
+    <string name="play_arrow">&#xE037;</string>
+    <string name="pause">&#xE034;</string>
+    <string name="skip_next">&#xE044;</string>
+    <string name="skip_previous">&#xE045;</string>
+    <string name="replay">&#xE042;</string>
+    <string name="menu">&#xE5D2;</string>
+    <string name="speaker">&#xE32D;</string>
 </resources>

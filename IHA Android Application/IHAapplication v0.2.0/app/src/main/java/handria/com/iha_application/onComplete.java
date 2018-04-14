@@ -6,6 +6,6 @@ package handria.com.iha_application;
 
 public interface onComplete {
     void onTaskComplete();
-    void onConnectAttempt(String status);
+    void onConnectAttempt(String[] info);
 
 }

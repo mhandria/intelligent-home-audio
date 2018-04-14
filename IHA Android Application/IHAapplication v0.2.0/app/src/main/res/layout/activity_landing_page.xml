@@ -16,17 +16,17 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:gravity="center"
-            android:textSize="40dp"
+            android:textSize="90dp"
             android:text="I.H.A"
             android:textColor="@color/colorPrimary"
-            android:fontFamily="@font/pc"/>
+            android:fontFamily="@font/lecker"/>
         <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:gravity="center"
-            android:textSize="20dp"
+            android:textSize="30dp"
             android:text="Inetlegent Home Audio"
-            android:fontFamily="@font/pc"
+            android:fontFamily="@font/lecker"
             android:textColor="@color/colorPrimary"/>
 
         <Button
