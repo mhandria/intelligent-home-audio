@@ -98,7 +98,7 @@ void init(void)
 	UART0_Init();   // UART0 initialization - USB
 	UART1_Init();   // UART1 initialization - PB0 Rx - PB1 Tx
 	
-	PortB_Init();
+	// PortB_Init();
 	PortC_Init();
 	PortE_Init();
 	PortF_Init();   // Initalize RGB LEDs
@@ -318,8 +318,8 @@ void SysTick_Handler(void)
 	ticksSinceLastRequest++;
 	
 	// Update the DAC to match the current sample //
-	upper = readBuff();
-	// lower = readBuff();
+	// upper = readBuff();
+	lower = readBuff();
 	writeDAC(upper, lower);
 	
 	// If we're running low on samples, request some more //
@@ -414,10 +414,13 @@ unsigned int getPtrDifference(void)
 void writeDAC(unsigned char upper, unsigned char lower)
 {
 	// 15 - 10
-	GPIO_PORTB_DATA_R = upper&0xFC;
+	// GPIO_PORTB_DATA_R = upper&0xFC;
 	
 	// 9 - 6
-	GPIO_PORTC_DATA_R = ((upper << 4)&0x30) | (lower&0xC0);
+	// GPIO_PORTC_DATA_R = ((upper << 4)&0x30) | (lower&0xC0);
+	
+	// 7 - 6
+	GPIO_PORTC_DATA_R = lower&0xC0;
 	
 	// 5 - 0
 	GPIO_PORTE_DATA_R = lower&0x3F;
