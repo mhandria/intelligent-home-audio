@@ -48,7 +48,7 @@ def Speaker_Client(client, spkn, addr):
             if(data == '?'):
                 print('Speaker - TCP Client #{0} Payload:  {1}'.format(spkn,data))
                 returnMessage('y', spkn, client)
-                time.sleep(0.5)
+                time.sleep(1)
                 if not wasPaused:
                     sharedMem.isSendingSong = True
                 #endif

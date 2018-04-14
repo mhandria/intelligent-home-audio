@@ -67,8 +67,7 @@ def playSong(fileName):
                 print('Converted')
             #endelse
 
-            # set memory to initiate song sending
-            sharedMem.isSendingSong = True
+            # Reset song index to beggining #
             for k in list(sharedMem.songFileIndexes):
                 sharedMem.songFileIndexes[k] = 44
             #endfor
@@ -92,6 +91,10 @@ def playSong(fileName):
 
             # set the songName for getCurrentSong#
             sharedMem.currentSongName = fileName
+
+            # Initiate song sending #
+            sharedMem.isSendingSong = True
+
             pauseSong()
             time.sleep(1.5)
             resumeSong()
