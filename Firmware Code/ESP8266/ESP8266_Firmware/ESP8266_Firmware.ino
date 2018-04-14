@@ -2,7 +2,10 @@
 #include <WiFiClient.h>
 #include <WiFiUDP.h>
 #include <EEPROM.h>
+
 #include "ESP8266Ping\src\ESP8266Ping.h"
+#define ENQ 5
+#define ACK 6
 
 // yield()          - lets the processor run background tasks (networking)
 // ESP.wdtDisable() - disables only the software watchdog timer
@@ -11,7 +14,7 @@
 // Constants //
 const char* ssid     = "wigglewiggle";
 const char* password = "I|\\|s+@|\\|+_R@m3|\\|_|\\|00d13s";
-const unsigned int BAUD_RATE = 1658880;
+const unsigned int BAUD_RATE = 1203005;
 // const unsigned int BAUD_RATE = 115200; // use for terminal debug in place of MCU communication
 const unsigned int MAX_CHUNK_SIZE = 4096; // The largest UDP packet we have buffer space for
 
@@ -19,6 +22,7 @@ const unsigned int MAX_CHUNK_SIZE = 4096; // The largest UDP packet we have buff
 const bool manualConnect = false;
 const bool writeManualConnectToEEPROM = false;
 const IPAddress IHA_SERVER(192,168,1,248);
+const unsigned int HB_DELAY_COUNT = 20000;
 
 // Global Variables //
 bool debug_enable;
@@ -44,39 +48,56 @@ void setup()
   UART_init();
   wifi_init();
   client_init();
+  flushSerial();
 }
 
 // Main program loop, runs after setup //
+unsigned int HB_delay = 0;
 void loop()
 {
   ESP.wdtFeed();
 
-  if(Serial.available() > 1 && ticksSinceLastRequest > 1000)
+  // Pulse the heartbeat if it's time
+  if(HB_delay >= HB_DELAY_COUNT)
   {
-   input_char = Serial.read();
-   Serial.flush(); // only read the first char, this prevents overflow
-   getSongChunk(); 
+    HB_delay = 0;   // reset the counter
+    UDP_write('h'); // Send a heartbeat pulse
   }
   else
   {
-    if(ticksSinceLastRequest < 1001)
+    HB_delay++;
+  }
+  
+  ESP.wdtFeed();
+
+  // Check serial for incomming MCU commands
+  if(Serial.available() > 1 && ticksSinceLastRequest > 500)
+  {
+   input_char = Serial.read();
+   
+   // Request a song chunk from the server if the char was 's'
+   if(input_char == 's')
+   {
+    getSongChunk();
+   }
+   
+   ticksSinceLastRequest = 0;
+  }
+  else
+  {
+    if(ticksSinceLastRequest < 40000)
     { // don't count forever to prevent overflow
       ticksSinceLastRequest++;
     }
   }
   
-  /*
   if(!client.connected())
   {
-    debugLine("The connection with the server has been lost. Reconnecting...");
-    Serial.write('!');
     // If we're disconnected try to reconnect forever
     clientReconnect();
-    debugLine("The connection with the server has been restored");
-    Serial.write('y');
+    flushSerial();
   }
-  */
-  // TODO: Check if Wi-Fi disconnected, if so, reconnect and update MCU LED
+  // TODO: Check if Wi-Fi disconnected, if so, reconnect
 }
 
 //                          //
@@ -89,7 +110,7 @@ void UART_init()
   unsigned char in = ' ';
   // Start the Serial communication to send messages to the MCU
   Serial.begin(BAUD_RATE);
-  
+  /*
   debug_enable = 0; // Debug is off by default
   while(in != 'c')
   {
@@ -110,6 +131,7 @@ void UART_init()
   debugLine(" ");
   debugLine("Handshake completed");
   debugLine(" ");
+  */
 }
 
 void wifi_init()
@@ -123,13 +145,13 @@ void wifi_init()
   while (WiFi.status() != WL_CONNECTED)
   { // Wait for the Wi-Fi to connect
     ESP.wdtFeed();
-    delay(1000);
+    delay(500);
     debugStr(".");
     ESP.wdtFeed();
   }
   
   ESP.wdtFeed();
-  Serial.print("Y");  // TODO: make this blocking without an acknowledgement
+  
   debugLine(" ");
   debugStr("Connected to WiFi using address: ");
   debugLine(WiFi.localIP().toString());
@@ -214,11 +236,6 @@ void client_init()
   
   delay(100);
   debugLine("Connected!");
-  Serial.print("Y"); // TODO: make this blocking without an acknowledgement
-  delay(100);
-  Serial.print("Y");
-  delay(100);
-  Serial.print("Y");
 
   // Setup UDP listening
   client_udp.begin(14124);
@@ -426,12 +443,16 @@ bool IPAddr_isEqual(uint8_t addr0[4], uint8_t addr1[4])
 // no longer connected to the server //
 void clientReconnect()
 {
+  debugLine("The connection with the server has been lost. Reconnecting...");
+  
   bool result = false;
   while(result == false)
   {
     result = client.connect(IHA_Server, 14124);
     delay(3000); // try again in 3 seconds
   }
+
+  debugLine("The connection with the server has been restored");
 }
 //                          //
 //                          //
@@ -447,6 +468,32 @@ unsigned char getMCUChar()
   }
   in = Serial.read();
   return in;
+}
+
+// Lets the MCU know that it's finished executing the cu rrent code block
+// and is ready to proceede to the next. Blocks code execution
+// until an acknowledge is returned from the MCU
+void proceede(void)
+{
+  flushSerial();
+  unsigned char in = ' ';
+  while(in != ACK)
+  {
+    Serial.write((unsigned char)ENQ);
+    delay(1000);
+    if(Serial.available() > 0)
+    {
+      in = Serial.read();
+    }
+  }
+}
+
+void flushSerial(void)
+{
+  while(Serial.available() > 0)
+  {
+    Serial.read();
+  }
 }
 
 unsigned char getServerChar()
@@ -524,7 +571,6 @@ void debugWrite(byte b)
     Serial.write(b);
   }
 }
-
 
 void debugPrintAddr(uint8_t* addr)
 {

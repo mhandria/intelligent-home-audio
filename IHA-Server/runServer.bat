@@ -1,0 +1,3 @@
+python Server.py
+
+pause

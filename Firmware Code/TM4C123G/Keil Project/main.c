@@ -33,27 +33,30 @@
 
 void DisableInterrupts(void);
 void EnableInterrupts(void);
+
 void init(void);
-void PortF_Init(void);
 void PortB_Init(void);
-void PortD_Init(void);
+void PortC_Init(void);
+void PortE_Init(void);
+void PortF_Init(void);
 void ESP_Init(void);    // Initializes the ESP8266
+
 void pulseLEDs(void);   // Flashy sequence to show the board reset
 void delay_ms(int t);
 void writeBuff(unsigned char in);
 unsigned char readBuff(void);
+void wait_for_procede(void);
 unsigned int getPtrDifference(void);
-void writeDAC(unsigned char out);
+void writeDAC(unsigned char upper, unsigned char lower);
+
 void SysTick_Init(void);           // Executes SysTick_Handler ever x periods
 void SysTick_Handler(void);        // Sends a sample to the the DAC
 
 // Constants Section //
 const unsigned long BUFFER_SIZE = 30000;
-const double SAMPLE_FREQ = 44100;
+const double SAMPLE_FREQ = 25000;
 
 // Global Variables Section //
-
-unsigned char returnChar;
 
 unsigned char sampleBuffer[BUFFER_SIZE];
 unsigned char *sampleReadPtr;
@@ -66,39 +69,18 @@ unsigned int ticksSinceLastRequest;
 
 int main(void)
 {
+	// delay_ms(1000); // Give the ESP8266 some time to turn on and get the serial line quiet
 	init();
-	
-  UART1_SendChar('s'); // MCU is ready to recieve song data
 	
 	UART0_SendString("Entering Main Loop");
 	UART0_CRLF();
 	
 	while(1)
 	{
-		
-		// TODO: capture the char and check for special characters,
-		// This wil require checking for accidental special chars in the ESP8266 and
-		// changing them so that they do not tirgger special actions
-		
 		while((UART1_FR_R&UART_FR_RXFE) == 0) 
 		{ // when a sample comes, store it in the buffer
 			writeBuff((unsigned char)(UART1_DR_R&0xFF));
 		}
-		
-		/*
-		// Check if we disconnected from the server
-		if(in == '!')
-		{
-			GPIO_PORTF_DATA_R &= ~0x0E;
-			GPIO_PORTF_DATA_R |=  0x04; // BLUE LED = Connected to Wi-Fi Network
-			
-			in = UART1_GetChar(); // Should send 'y', that would mean reconnected
-			UART0_SendChar(in);
-			
-			GPIO_PORTF_DATA_R &= ~0x0E;
-			GPIO_PORTF_DATA_R |=  0x08; // Green LED = ESP8266 Serial Comm OK
-		}
-		*/
 	}
 }
 
@@ -115,9 +97,11 @@ void init(void)
 	PLL_Init();     // 80Mhz clock
 	UART0_Init();   // UART0 initialization - USB
 	UART1_Init();   // UART1 initialization - PB0 Rx - PB1 Tx
+	
+	// PortB_Init();
+	PortC_Init();
+	PortE_Init();
 	PortF_Init();   // Initalize RGB LEDs
-	PortB_Init();
-	// PortD_Init();
 	
 	UART0_SendString("USB UART Connection OK");
 	UART0_CRLF();
@@ -126,7 +110,9 @@ void init(void)
 	
 	pulseLEDs();
 	
-	ESP_Init();
+	// ESP_Init();
+	
+	while((UART1_FR_R&UART_FR_RXFE) != 0); // wait until data is being sent to us
 	
 	EnableInterrupts();
 }
@@ -151,6 +137,53 @@ void pulseLEDs(void)
 	}
 }
 
+// PB2-PB7 GPIO Output
+void PortB_Init(void)
+{
+  unsigned long volatile delay;
+  SYSCTL_RCGC2_R |= 0x00000002;     // activate clock for port B
+  delay = SYSCTL_RCGC2_R;
+  GPIO_PORTB_AMSEL_R &= ~0xFC;       // disable analog functionality on PB2-PB7
+  GPIO_PORTB_PCTL_R  &= ~0xFFFFFF00; // configure PB2-PB7 as GPIO
+  GPIO_PORTB_DIR_R   |=  0xFC;       // make PB2-PB7 output
+	GPIO_PORTB_DR8R_R  |=  0xFC;       // enable 8 mA drive on PB2 - PB7
+  GPIO_PORTB_AFSEL_R &= ~0xFC;       // disable alt funct on PB2-PB7
+  GPIO_PORTB_DEN_R   |=  0xFC;       // enable digital I/O on PB2-PB7
+	GPIO_PORTB_DATA_R  &= ~0xFC;       // Set to zero
+}
+
+// PC7 - PC4 GPIO Output
+void PortC_Init(void)
+{
+  unsigned long volatile delay;
+  SYSCTL_RCGC2_R |= 0x00000004;     // activate clock for port C
+  delay = SYSCTL_RCGC2_R;
+  GPIO_PORTC_AMSEL_R &= ~0xF0;       // disable analog functionality on PC7 - PC4
+  GPIO_PORTC_PCTL_R  &= ~0xFFFF0000; // configure PC7 - PC4 as GPIO
+  GPIO_PORTC_DIR_R   |=  0xF0;       // make PC7 - PC4 output
+	// GPIO_PORTC_DR8R_R  |=  0xF0;       // enable 8 mA drive on PC7 - PC4
+  GPIO_PORTC_AFSEL_R &= ~0xF0;       // disable alt funct on PC7 - PC4
+  GPIO_PORTC_DEN_R   |=  0xF0;       // enable digital I/O on PC7 - PC4
+	GPIO_PORTC_DATA_R  &= ~0xF0;       // Set to zero
+}
+
+// PE5 - PE0 GPIO Output
+// 0011 1111
+// 3    F
+void PortE_Init(void)
+{
+  unsigned long volatile delay;
+  SYSCTL_RCGC2_R |= 0x00000010;     // activate clock for port E
+  delay = SYSCTL_RCGC2_R;
+  GPIO_PORTE_AMSEL_R &= ~0x3F;       // disable analog functionality on PD7, PD6, PD1, PD0
+  GPIO_PORTE_PCTL_R  &= ~0x00FFFFFF; // configure PD7, PD6, PD1, PD0 as GPIO
+  GPIO_PORTE_DIR_R   |=  0x3F;       // make PD7, PD6, PD1, PD0 output
+	// GPIO_PORTE_DR8R_R  |=  0x3F;       // enable 8 mA drive on PD7, PD6, PD1, PD0
+  GPIO_PORTE_AFSEL_R &= ~0x3F;       // disable alt funct on PD7, PD6, PD1, PD0
+  GPIO_PORTE_DEN_R   |=  0x3F;       // enable digital I/O on PD7, PD6, PD1, PD0
+	GPIO_PORTE_DATA_R  &= ~0x3F;       // Set to zero
+}
+
 // Configure PF1-PF3 as GPIO Output
 void PortF_Init(void)
 {
@@ -167,44 +200,11 @@ void PortF_Init(void)
   GPIO_PORTF_PUR_R   &= ~0x0E;       // Enable weak pull-up on PF1-PF3
 }
 
-// PB2-PB7 GPIO Output
-void PortB_Init(void)
-{
-  unsigned long volatile delay;
-  SYSCTL_RCGC2_R |= 0x00000002;     // activate clock for port B
-  delay = SYSCTL_RCGC2_R;
-  GPIO_PORTB_AMSEL_R &= ~0xFC;       // disable analog functionality on PB2-PB7
-  GPIO_PORTB_PCTL_R  &= ~0xFFFFFF00; // configure PB2-PB7 as GPIO
-  GPIO_PORTB_DIR_R   |=  0xFC;       // make PB2-PB7 output
-	GPIO_PORTB_DR8R_R  |=  0xFC;       // enable 8 mA drive on PB2 - PB7
-  GPIO_PORTB_AFSEL_R &= ~0xFC;       // disable alt funct on PB2-PB7
-  GPIO_PORTB_DEN_R   |=  0xFC;       // enable digital I/O on PB2-PB7
-	GPIO_PORTB_DATA_R  &= ~0xFC;       // Set to zero
-}
-
-// PD0, PD1 GPIO Output
-void PortD_Init(void)
-{
-  unsigned long volatile delay;
-  SYSCTL_RCGC2_R |= 0x00000008;     // activate clock for port D
-  delay = SYSCTL_RCGC2_R;
-  GPIO_PORTD_AMSEL_R &= ~0x03;       // disable analog functionality on PD0-PD1
-  GPIO_PORTD_PCTL_R  &= ~0x000000FF; // configure PD0-PD1 as GPIO
-  GPIO_PORTD_DIR_R   |=  0x03;       // make PD0-PD1 output
-	GPIO_PORTD_DR8R_R  |=  0x03;       // enable 8 mA drive on PD0-PD1
-  GPIO_PORTD_AFSEL_R &= ~0x03;       // disable alt funct on PD0-PD1
-  GPIO_PORTD_DEN_R   |=  0x03;       // enable digital I/O on PD0-PD1
-	GPIO_PORTD_DATA_R  &= ~0x03;       // Set to zero
-}
-
 // Reset ESP8266, verify connection to network
 void ESP_Init(void)
 {
 	unsigned char in;
 	in = ' ';
-	
-	UART0_SendString("Reset ESP8266");
-	UART0_CRLF();
 	
 	// Handshake
 	
@@ -224,6 +224,7 @@ void ESP_Init(void)
 	delay_ms(100);
 	UART1_SendChar('c');
 	
+	UART0_CRLF();
 	UART0_SendString("ESP8266 Serial Handshake Completed");
 	UART0_CRLF();
 	
@@ -231,30 +232,18 @@ void ESP_Init(void)
 	GPIO_PORTF_DATA_R |=  0x02; // RED LED = Serial Connection Established
 	
 	// Wi-Fi connected char
-	returnChar = ' ';
-	while(returnChar != 'Y')
-	{
-		returnChar = UART1_GetChar();
-		// UART0_SendChar(returnChar);
-	}
+	wait_for_procede();
 	
-	UART0_SendString("ESP8266 Wi-Fi Connection OK?: ");
-	UART0_SendChar(returnChar);
+	UART0_SendString("ESP8266 Wi-Fi Connection OK");
 	UART0_CRLF();
 	
 	GPIO_PORTF_DATA_R &= ~0x0E; // Turn off LEDs
 	GPIO_PORTF_DATA_R |=  0x04; // BLUE LED = Connected to Wi-Fi Network
 	
 	// Server connected char
-	returnChar = ' ';
-	while(returnChar != 'Y')
-	{
-		returnChar = UART1_GetChar();
-		// UART0_SendChar(returnChar);
-	}
+	wait_for_procede();
 	
-	UART0_SendString("ESP8266 Server-Client Connection OK?: ");
-	UART0_SendChar(returnChar);
+	UART0_SendString("ESP8266 Server-Client Connection OK");
 	UART0_CRLF();
 	
 	GPIO_PORTF_DATA_R &= ~0x0E; // Turn off LEDs
@@ -289,12 +278,9 @@ void SysTick_Init(void)
 // Interrupt service routine
 unsigned char value = 0;
 bool decreasing = 0;
-unsigned int ticksSinceLastRequest;
-
-void SysTick_Handler(void)
+void TriangleWave(void)
 {
-	/*
-	writeDAC(value);
+	writeDAC(value, 0x00);
 	if(decreasing)
 	{
 		if(value == 0)
@@ -319,25 +305,41 @@ void SysTick_Handler(void)
 			value++;
 		}
 	}
-	*/
+}
+
+unsigned int ticksSinceLastRequest;
+const unsigned char temp = 0x03;
+void SysTick_Handler(void)
+{
+	unsigned char upper, lower;
+	
+	// TriangleWave();
 	
 	ticksSinceLastRequest++;
-	writeDAC(readBuff()); // Update the DAC to match the current sample
-	if(getPtrDifference() < 20000 && ticksSinceLastRequest > 1200)
-	{ // If we're running low on samples, request some more
+	
+	// Update the DAC to match the current sample //
+	// upper = readBuff();
+	lower = readBuff();
+	writeDAC(upper, lower);
+	
+	// If we're running low on samples, request some more //
+	if(getPtrDifference() < 7000 && ticksSinceLastRequest > 1300)
+	{ 
 		UART1_SendChar('s');
 		ticksSinceLastRequest = 0;
 	}
 }
 
+unsigned int tickSinceLastComplain = 0;
 void writeBuff(unsigned char in)
 {
 	
 	if(sampleWritePtr == sampleReadPtr && arePtrsMisaligned)
 	{ // if the write pointer caught up to the read pointer, 
 		// then drop the sample
-		// UART0_SendString("Samples came in too fast");
-		// UART0_CRLF();
+		
+		UART0_SendString("Samples came in too fast");
+		UART0_CRLF();
 	}
 	else
 	{ // otherwise write to the buffer and update the pointer
@@ -364,18 +366,22 @@ unsigned char readBuff(void)
 	if(sampleWritePtr == sampleReadPtr && !arePtrsMisaligned)
 	{ // if the read pointer caught up to the write pointer, 
 		// then play silence
-		/*
-		if(songPlaying)
+		
+		if(songPlaying && tickSinceLastComplain > 10000)
 		{
+			tickSinceLastComplain = 0;
 			UART0_SendString("Samples came in too slow");
 			UART0_CRLF();
 		}
-		*/
+		else if(songPlaying)
+		{
+			tickSinceLastComplain++;
+		}
 	}
 	else
 	{ // otherwise read the buffer and update the pointer
-			// songPlaying = true;
-		
+			songPlaying = true;
+			
 			out = *sampleReadPtr;
 			
 			if(sampleReadPtr - &sampleBuffer[0] < BUFFER_SIZE-1)
@@ -405,17 +411,29 @@ unsigned int getPtrDifference(void)
 	}
 }
 
-void writeDAC(unsigned char out)
-{ // TODO: test all values of this with a multimeter
-	// out = out + 127;
-	/*
-	GPIO_PORTB_DATA_R &=    ~0xFC;
-	GPIO_PORTB_DATA_R |= out&0xFC;
-	GPIO_PORTD_DATA_R &=    ~0x03;
-	GPIO_PORTD_DATA_R |= out&0x03;
-	*/
-	GPIO_PORTB_DATA_R = out&0xFC;
-	// GPIO_PORTD_DATA_R = out&0x03;
+void writeDAC(unsigned char upper, unsigned char lower)
+{
+	// 15 - 10
+	// GPIO_PORTB_DATA_R = upper&0xFC;
+	
+	// 9 - 6
+	// GPIO_PORTC_DATA_R = ((upper << 4)&0x30) | (lower&0xC0);
+	
+	// 7 - 6
+	GPIO_PORTC_DATA_R = lower&0xC0;
+	
+	// 5 - 0
+	GPIO_PORTE_DATA_R = lower&0x3F;
+}
+
+void wait_for_procede(void)
+{
+	unsigned char in = ' ';
+	while(in != ENQ)
+	{
+		in = UART1_GetChar();
+	}
+	UART1_SendChar(ACK);
 }
 
 // 80Mhz = 12.5ns period
