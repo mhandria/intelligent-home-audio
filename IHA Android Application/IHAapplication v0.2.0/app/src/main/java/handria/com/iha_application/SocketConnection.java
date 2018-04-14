@@ -18,11 +18,13 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.lang.ref.WeakReference;
+import java.lang.reflect.Array;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.concurrent.TimeUnit;
 
 import static android.content.Context.WIFI_SERVICE;
@@ -210,11 +212,11 @@ public class SocketConnection extends AsyncTask<String, String, String[]> {
                     if(this.isCancelled()) return res;
                 }
                 if(!status) return res;
-                String[] speakerList = buffRead.readLine().split(";");
-                for(String s: speakerList){
-                    res.add(s);
+                if(buffRead.read() == ACK){
+                    String[] speakerList = buffRead.readLine().split(";");
+                    res.addAll(Arrays.asList(speakerList));
+                    validResponse = true;
                 }
-                validResponse = true;
             }else{
                 out.println(cmd);
                 if(!cmd.equals("stat")) {
@@ -267,7 +269,7 @@ public class SocketConnection extends AsyncTask<String, String, String[]> {
                 if(this.isCancelled()){
                     return hostName;
                 }
-                //SString testIp = "192.168.1."+String.valueOf(i);
+                //String testIp = "192.168.1."+String.valueOf(i);
                 publishProgress("Pinging: "+testIp);
                 InetAddress address = InetAddress.getByName(testIp);
                 boolean reachable = address.isReachable(1000);
@@ -291,13 +293,6 @@ public class SocketConnection extends AsyncTask<String, String, String[]> {
         return hostName;
     }
 
-    private String getExternalHostName(String hostName, int port){
-        ArrayList<String> response = sendCmd(hostName, port, "getExtIP");
-        if(response.get(0).equals("true")){
-            return response.get(1);
-        }
-        return "INVALID";
-    }
 
 
 }

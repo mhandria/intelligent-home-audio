@@ -70,7 +70,8 @@ public class MusicPage extends AppCompatActivity implements onComplete, Sideview
         needSongs = true;
 
         _connection = getSocket();
-        icon = getResources().getFont(R.font.icon);
+        //icon = getResources().getFont(R.font.icon);
+        icon = ResourcesCompat.getFont(MusicPage.this, R.font.icon);
         hostName = extractIp();
         if(hostName.equals("INVALID")){
             _connection.executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR, "false", port, "stat");
@@ -324,6 +325,9 @@ public class MusicPage extends AppCompatActivity implements onComplete, Sideview
                 sidenav.setVisibility(View.VISIBLE);
             }else if(res[1].equals("resume") || res[1].equals("pause")){
                 if(res[2].equals("true")){
+                    updateMusicControl();
+                }else{
+                    isPlaying = true;
                     updateMusicControl();
                 }
             }
