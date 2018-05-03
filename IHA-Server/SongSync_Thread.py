@@ -9,7 +9,7 @@ def SongSync():
 
     try:
         while True:
-            time.sleep(0.3)
+            time.sleep(7)
 
             maxPos = 0;
             
