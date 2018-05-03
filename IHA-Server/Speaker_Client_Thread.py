@@ -17,6 +17,7 @@ def returnMessage(payload, spkn, client):
 
 def Speaker_Client(client, spkn, addr):
     global isSendingSong
+    global timeOfLastPause
     # initialize variables for this file
 
     print('')
@@ -49,7 +50,9 @@ def Speaker_Client(client, spkn, addr):
                 print('Speaker - TCP Client #{0} Payload:  {1}'.format(spkn,data))
                 returnMessage('y', spkn, client)
                 time.sleep(1)
+                sharedMem.timeOfLastPause = time.time()
                 if not wasPaused:
+                    sharedMem.syncIndexes()
                     sharedMem.isSendingSong = True
                 #endif
             #endif
