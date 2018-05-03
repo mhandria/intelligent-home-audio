@@ -15,40 +15,6 @@ SONG_CHUNK_SIZE = 1400
 UDP_lastPercentage = 0
 UDP_TicksSinceLastSync = 0
 
-def syncSpeakers():
-    global songFileIndexes
-    global UDP_TicksSinceLastSync
-
-    try:
-        if(UDP_TicksSinceLastSync > 20):
-            # if it has been enough time since the last sync
-            # sync the speakers
-            UDP_TicksSinceLastSync = 0
-            maxPos = 0;
-            
-            # get the value of the furthest most song position #
-            for k in list(sharedMem.songFileIndexes):
-                if(sharedMem.songFileIndexes[k] > maxPos):
-                    maxPos = sharedMem.songFileIndexes[k]
-                #endif
-            #endfor
-
-            # update all song positions to maxPos #
-            for k in list(sharedMem.songFileIndexes):
-                sharedMem.songFileIndexes[k] = maxPos
-            #endfor
-        else:
-            # otherwise increment the counter
-            UDP_TicksSinceLastSync = UDP_TicksSinceLastSync + 1
-        #endelse
-    except Exception as e:
-        print('Error: syncSpeakers')
-        print('Error on line {}'.format(sys.exc_info()[-1].tb_lineno))
-        print(type(e).__name__)
-        print(e)
-
-#end syncSpeakers
-
 def sendSongChunk(client_spkn, client_addr):
     global SONG_CHUNK_SIZE
     global UDP_lastPercentage
@@ -57,8 +23,6 @@ def sendSongChunk(client_spkn, client_addr):
     global UDP_sendSocket
 
     try:
-        # syncSpeakers()
-
         # get a copy of the current song index for this speaker
         UDP_songFileIndex = sharedMem.songFileIndexes[client_spkn]
 
@@ -87,8 +51,12 @@ def sendSongChunk(client_spkn, client_addr):
                 songChunkSize = SONG_CHUNK_SIZE
             #endelse
 
-            # get the chunk and apply volume modifier #
-            songChunkAdjusted = (sharedMem.songToSend[UDP_songFileIndex:UDP_songFileIndex + songChunkSize]*sharedMem.speakerVolume).astype(np.uint8).tobytes()
+            # get the chunk and apply volume modifier if the volume is less than 100% #
+            if(sharedMem.speakerVolume < 1):
+                songChunkAdjusted = (sharedMem.songToSend[UDP_songFileIndex:UDP_songFileIndex + songChunkSize]*sharedMem.speakerVolume).astype(np.uint8).tobytes()
+            else: # otherwise just get the data without calculating volume #
+                songChunkAdjusted = sharedMem.songToSend[UDP_songFileIndex:UDP_songFileIndex + songChunkSize]
+            #endelse
 
             # send the chunk
             UDP_sendSocket.sendto(songChunkAdjusted,(client_addr,14124))
@@ -162,13 +130,10 @@ def Speaker_UDP_Client(UDP_listen_sock):
             #endexcept
 
             # Parse the input and execute the appropriate action #
-
             if(data.decode() == 's' and client_spkn != -1):
                 sendSongChunk(client_spkn, client_addr)
                 sharedMem.speakerWDTs[client_spkn] = time.time() #reset the WDT
             elif(data.decode() == 'h'):
-                # return the volume
-                sharedMem.speakerVolume
                 sharedMem.speakerWDTs[client_spkn] = time.time() #reset the WDT
             #endelse
 

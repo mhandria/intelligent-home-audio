@@ -422,7 +422,7 @@ def incVolume():
         newVolume = sharedMem.speakerVolume + 0.10
         if(newVolume >= 0 and newVolume <= 1):
             sharedMem.speakerVolume = newVolume
-        else
+        else:
             sharedMem.speakerVolume = 1
         #endelse
 
@@ -443,7 +443,7 @@ def decVolume():
         newVolume = sharedMem.speakerVolume - 0.10
         if(newVolume >= 0 and newVolume <= 1):
             sharedMem.speakerVolume = newVolume
-        else
+        else:
             sharedMem.speakerVolume = 0
         #endelse
 
