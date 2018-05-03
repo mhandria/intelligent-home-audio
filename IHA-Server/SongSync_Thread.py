@@ -9,22 +9,15 @@ def SongSync():
 
     try:
         while True:
-            time.sleep(7)
-
-            maxPos = 0;
+            time.sleep(5)
             
-            # get the value of the furthest most song position #
-            for k in list(sharedMem.songFileIndexes):
-                if(sharedMem.songFileIndexes[k] > maxPos):
-                    maxPos = sharedMem.songFileIndexes[k]
-                #endif
-            #endfor
-
-            # update all song positions to maxPos #
-
-            for k in list(sharedMem.songFileIndexes):
-                sharedMem.songFileIndexes[k] = maxPos
-            #endfor
+            # sync only if the buffer is good and full
+            if(time.time() - sharedMem.timeOfLastPause > 10):
+                sharedMem.syncIndexes()
+                print('<sync>')
+            else:
+                print('<too early to sync>')
+            #endelse
 
             # repeat #
         #endwhile

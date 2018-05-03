@@ -41,6 +41,7 @@ def playSong(fileName):
     global songSize
     global PHONE_isSongPaused
     global currentSongName
+    global timeOfLastPause
 
     # TODO: if the number of files or filesize of /temp/ passes a
     #       threshold, then start deleting files as you make more
@@ -97,6 +98,8 @@ def playSong(fileName):
 
             pauseSong()
             time.sleep(1.5)
+            sharedMem.syncIndexes()
+            sharedMem.timeOfLastPause = time.time()
             resumeSong()
         else: #if the file name doesn't exist
             returnPayload = NAK+'File "' + fileName + '" does not exist'
@@ -135,11 +138,15 @@ def pauseSong():
 def resumeSong():
     global isSendingSong
     global PHONE_isSongPaused
+    global timeOfLastPause
 
     try:
         if(not sharedMem.isSendingSong and PHONE_isSongPaused):
+            sharedMem.syncIndexes()
+            sharedMem.timeOfLastPause = time.time()
             sharedMem.isSendingSong = True
             PHONE_isSongPaused = False
+
             returnPayload = ACK
         else:
             returnPayload = NAK+'No song is paused'
@@ -229,36 +236,11 @@ def getSpeakerList(client):
     return returnPayload
 #end getSpeakerList
 
-def getSpeakerListd(client):
-    
-    # this should display green
-    payload = '0' + ':' + 'y' + ':' + 'y'+  ';'
-    print(payload)
-    client.send(payload.encode('utf-8'))
-    
-    # this should not display
-    payload = '1' + ':' + 'n' + ':' + 'y'+  ';'
-    print(payload)
-    client.send(payload.encode('utf-8'))
-
-    # this should display red
-    payload = '2' + ':' + 'y' + ':' + 'n'+  ';'
-    print(payload)
-    client.send(payload.encode('utf-8'))
-
-    # this should not display
-    payload = '3' + ':' + 'n' + ':' + 'n'+  ';'
-    print(payload)
-    client.send(payload.encode('utf-8'))
-
-    returnPayload = EOT
-    return returnPayload
-#end getSpeakerList
-
 def enableSpeaker(spkr_enum):
     global speakerEnables
     global speakerEnumeration
     global speakerAddresses
+    global timeOfLastPause
 
     try:
         if spkr_enum in list(sharedMem.speakerEnumeration.keys()):
@@ -270,6 +252,8 @@ def enableSpeaker(spkr_enum):
             if(sharedMem.isSendingSong):
                 pauseSong()
                 time.sleep(2)
+                sharedMem.syncIndexes()
+                sharedMem.timeOfLastPause = time.time()
                 resumeSong()
             #endif
             
@@ -303,7 +287,7 @@ def disableSpeaker(spkr_enum):
             returnPayload = NAK + 'Invalid speaker enumerator: "' + str(spkr_enum) + '"'
         #endelse
 
-    except Exception as e:
+    except Exception as e: 
         print('Phone - ERROR: disableSpeaker')
         print('Error on line {}'.format(sys.exc_info()[-1].tb_lineno))
         print(e)
