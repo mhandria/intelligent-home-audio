@@ -419,10 +419,12 @@ def setSpeakerVolume(volume):
 def incVolume():
     global speakerVolume
     try:
-        newVolume = sharedMem.speakerVolume + 0.05
+        newVolume = sharedMem.speakerVolume + 0.10
         if(newVolume >= 0 and newVolume <= 1):
             sharedMem.speakerVolume = newVolume
-        #endif
+        else
+            sharedMem.speakerVolume = 1
+        #endelse
 
         print('New volume = {0}%'.format(round(sharedMem.speakerVolume*100)))
 
@@ -438,16 +440,18 @@ def incVolume():
 def decVolume():
     global speakerVolume
     try:
-        newVolume = sharedMem.speakerVolume - 0.05
+        newVolume = sharedMem.speakerVolume - 0.10
         if(newVolume >= 0 and newVolume <= 1):
             sharedMem.speakerVolume = newVolume
-        #endif
+        else
+            sharedMem.speakerVolume = 0
+        #endelse
 
         print('New volume = {0}%'.format(round(sharedMem.speakerVolume*100)))
 
         returnPayload = ACK
     except Exception as e:
-        print('Phone - ERROR: deccVolume')
+        print('Phone - ERROR: decVolume')
         print(e)
         returnPayload = NAK
     #endexcept
