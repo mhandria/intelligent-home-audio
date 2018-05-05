@@ -22,7 +22,7 @@ def init():
     aliveSpeakers      = {}
     speakerAddresses   = {}
     songFileIndexes    = {}
-    songFileIndexes.update({-1:44})
+    # songFileIndexes.update({-1:44})
     speakerEnables     = {}
     speakerEnumeration = {}
     speakerVolume      = 0.0 
