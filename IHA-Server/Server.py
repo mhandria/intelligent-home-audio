@@ -80,10 +80,19 @@ udp_thread.start()
 songSync_thread = Thread(target=SongSync)
 songSync_thread.start()
 
+# read saved speaker numbers #
+f = open('ids.txt','r')
+for line in f:
+    linesplit = line.split(':')
+    sharedMem.speakerEnumeration.update({int(linesplit[1]):str(linesplit[0])})
+#endfor
+f.close()
+
 print('Speaker - Waiting for speaker clients...')
 
-speakerNumber = 0 # current lifetime connection number
-speakerEnum   = 0 # current lifetime unique IPv4 connections
+speakerNumber = 0                                      # current lifetime connection number
+speakerEnum   = len(sharedMem.speakerEnumeration) + 1  # current lifetime unique IPv4 connections
+print('Found registration of {0} speakers'.format(speakerEnum - 1))
 while True:
     tcp_client, addr = tcp_socket.accept() # Establish connection with next client.
 
@@ -92,20 +101,29 @@ while True:
     try:
         oldSpeakerNumber = sharedMem.speakerAddresses[addr[0]]
     except Exception as e:
-        a = 0
+        oldSpeakerNumber = speakerNumber
     #endexcept
     sharedMem.speakerAddresses.update({addr[0] : speakerNumber})
     sharedMem.speakerWDTs.update(     {speakerNumber : time.time() + 5})
     sharedMem.songFileIndexes.update( {speakerNumber : 44})
-
+    
     # check if this is the first time this address has connected
     if(not (addr[0] in sharedMem.speakerEnumeration.values())):
         # the speaker hasn't connected before so assign it an enumeration
         sharedMem.speakerEnumeration.update({speakerEnum:addr[0]})
         sharedMem.speakerEnables.update(    {speakerNumber : True}) # default is true but can be changed while disconnected
         speakerEnum = speakerEnum + 1
+
+        f = open('ids.txt','a')
+        wrtstr = str(addr[0]) + ':' + str(speakerEnum) + ':\n'
+        f.write(wrtstr)
+        f.close()
     else: #otherwise move the old enable value to the new speaker number
-        sharedMem.speakerEnables.update({speakerNumber : sharedMem.speakerEnables.pop(oldSpeakerNumber)})
+        if(oldSpeakerNumber == speakerNumber):
+            sharedMem.speakerEnables.update(    {speakerNumber : True}) # default is true but can be changed while disconnected
+        else:
+            sharedMem.speakerEnables.update({speakerNumber : sharedMem.speakerEnables.pop(oldSpeakerNumber)})
+        #endelse
     #endelse
 
     # Start the TCP handler thread

@@ -198,37 +198,46 @@ def getCurrentSong():
 
 def getSpeakerList(client):
     try:
+        print('Sending Speaker List:')
+        print('Speaker Enumerations: {0}'.format(sharedMem.speakerEnumeration))
         if(not sharedMem.speakerEnumeration): # if empty
             returnPayload = NAK  + 'No speakers yet'
         else:
             payload = ACK
             client.send(payload.encode('utf-8'))
 
-            for n in list(sharedMem.speakerEnumeration.keys()):
-                spkr_addr   = sharedMem.speakerEnumeration[n]
-                spkr_number = sharedMem.speakerAddresses[spkr_addr]
+            # for n in list(sharedMem.speakerEnumeration.keys()):
+            for n in list(sorted(sharedMem.speakerEnumeration.keys())):
+                try:
+                    spkr_addr   = sharedMem.speakerEnumeration[n]
+                    spkr_number = sharedMem.speakerAddresses[spkr_addr]
 
-                if spkr_number in sharedMem.aliveSpeakers.keys():
-                    isConnected = 'y'
-                else:
-                    isConnected = 'n'
-                #endelse
+                    if spkr_number in sharedMem.aliveSpeakers.keys():
+                        isConnected = 'y'
+                    else:
+                        isConnected = 'n'
+                    #endelse
 
-                if(sharedMem.speakerEnables[spkr_number]):
-                    isEnabled = 'y'
-                else:
-                    isEnabled = 'n'
-                #endelse
-                
-                payload = str(n) + ':' + isConnected + ':' + isEnabled +  ';'
-                print(payload)
-                client.send(payload.encode('utf-8'))
+                    if(sharedMem.speakerEnables[spkr_number]):
+                        isEnabled = 'y'
+                    else:
+                        isEnabled = 'n'
+                    #endelse
+                    
+                    payload = str(n) + ':' + isConnected + ':' + isEnabled +  ';'
+                    print(payload)
+                    client.send(payload.encode('utf-8'))
+                except KeyError as e:
+                    a = 0
+                #endexcept
             #endfor
 
             returnPayload = EOT
         #endelse
     except Exception as e:
         print('Phone - ERROR: getSpeakerList')
+        print('Error on line {}'.format(sys.exc_info()[-1].tb_lineno))
+        print(type(e).__name__)
         print(e)
         returnPayload = NAK
     #endexcept
@@ -276,7 +285,7 @@ def disableSpeaker(spkr_enum):
     global speakerEnables
     global speakerEnumeration
     global speakerAddresses
-    
+
     try:
         if spkr_enum in list(sharedMem.speakerEnumeration.keys()):
             spkr_addr = sharedMem.speakerEnumeration[spkr_enum]
