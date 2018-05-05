@@ -451,6 +451,14 @@ def decVolume():
     return returnPayload
 #end incVolume
 
+def clearEnumerations():
+    f = open('ids.txt','w')
+    f.close
+
+    returnPayload = ACK + 'Enumerations cleared. Please restart the server.'
+    return returnPayload
+# end clearEnumerations
+
 # Main #
 def Phone_Client(ADDR):
     print('')
@@ -525,6 +533,8 @@ def Phone_Client(ADDR):
                 payload = incVolume()
             elif(data == 'decVolume'):
                 payload = decVolume()
+            elif(data == 'clearEnumerations'):
+                payload = clearEnumerations()
             else:
                 payload = NAK+'Invalid Command: "' + data + '"'
             #endelse
