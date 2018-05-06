@@ -112,12 +112,13 @@ while True:
         # the speaker hasn't connected before so assign it an enumeration
         sharedMem.speakerEnumeration.update({speakerEnum:addr[0]})
         sharedMem.speakerEnables.update(    {speakerNumber : True}) # default is true but can be changed while disconnected
-        speakerEnum = speakerEnum + 1
 
         f = open('ids.txt','a')
         wrtstr = str(addr[0]) + ':' + str(speakerEnum) + ':\n'
         f.write(wrtstr)
         f.close()
+
+        speakerEnum = speakerEnum + 1
     else: #otherwise move the old enable value to the new speaker number
         if(oldSpeakerNumber == speakerNumber):
             sharedMem.speakerEnables.update(    {speakerNumber : True}) # default is true but can be changed while disconnected
