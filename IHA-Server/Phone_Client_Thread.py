@@ -255,15 +255,18 @@ def enableSpeaker(spkr_enum):
         if spkr_enum in list(sharedMem.speakerEnumeration.keys()):
             spkr_addr = sharedMem.speakerEnumeration[spkr_enum]
             spkr_num = sharedMem.speakerAddresses[spkr_addr]
-            sharedMem.speakerEnables.update({spkr_num : True})
 
-            # when a speakers is connected, clear the buffers so that they are synced #
-            if(sharedMem.isSendingSong):
-                pauseSong()
-                time.sleep(2)
-                sharedMem.syncIndexes()
-                sharedMem.timeOfLastPause = time.time()
-                resumeSong()
+            if(sharedMem.speakerEnables[spkr_num] == False):
+                sharedMem.speakerEnables.update({spkr_num : True})
+
+                # when a speakers is connected, clear the buffers so that they are synced #
+                if(sharedMem.isSendingSong):
+                    pauseSong()
+                    time.sleep(2)
+                    sharedMem.syncIndexes()
+                    sharedMem.timeOfLastPause = time.time()
+                    resumeSong()
+                #endif
             #endif
             
             returnPayload = ACK
