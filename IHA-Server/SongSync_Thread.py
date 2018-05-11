@@ -12,7 +12,7 @@ def SongSync():
             time.sleep(5)
             
             # sync only if the buffer is good and full
-            if(time.time() - sharedMem.timeOfLastPause > 10):
+            if(time.time() - sharedMem.timeOfLastPause > 5):
                 sharedMem.syncIndexes()
                 print('<sync>')
             else:
