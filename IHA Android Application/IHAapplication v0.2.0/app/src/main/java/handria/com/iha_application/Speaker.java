@@ -20,9 +20,11 @@ public class Speaker {
     public String getSpeakerId(){
         return speakerId;
     }
+
     public void toggleStat(){
         status = (status == 1) ? 0: 1;
     }
+
     public int getStatusColor(){
         if(status == 0){
             return Color.RED;

@@ -45,5 +45,4 @@
                 android:gravity="end"/>
         </LinearLayout>
     </android.support.v7.widget.Toolbar>
-
 </android.support.constraint.ConstraintLayout>

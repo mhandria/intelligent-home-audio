@@ -9,8 +9,7 @@
         android:orientation="vertical"
         android:id="@+id/homePage"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:onClick="doSomething">
+        android:layout_height="wrap_content">
 
     </LinearLayout>
 

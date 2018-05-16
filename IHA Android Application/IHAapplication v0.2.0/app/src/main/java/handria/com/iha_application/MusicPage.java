@@ -1,19 +1,19 @@
 package handria.com.iha_application;
 
-import android.animation.ObjectAnimator;
+
+import android.Manifest;
 import android.content.Context;
+import android.content.pm.PackageManager;
 import android.content.res.Configuration;
 import android.content.res.Resources;
 import android.graphics.Color;
 import android.graphics.Typeface;
-import android.icu.text.UnicodeSetSpanner;
-import android.net.ConnectivityManager;
 import android.os.AsyncTask;
-import android.support.design.widget.TabLayout;
+import android.os.Build;
+import android.support.annotation.NonNull;
 import android.support.v4.content.res.ResourcesCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
-import android.text.Layout;
 import android.text.TextUtils;
 import android.util.DisplayMetrics;
 import android.util.Log;
@@ -22,22 +22,40 @@ import android.view.Gravity;
 import android.view.KeyEvent;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.CompoundButton;
 import android.widget.FrameLayout;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.ProgressBar;
+import android.widget.SeekBar;
 import android.widget.TableLayout;
 import android.widget.TableRow;
 import android.widget.TextView;
+import android.widget.Toast;
+import android.widget.ToggleButton;
 
+
+import org.altbeacon.beacon.Beacon;
+import org.altbeacon.beacon.BeaconConsumer;
+import org.altbeacon.beacon.BeaconManager;
+import org.altbeacon.beacon.BeaconParser;
+import org.altbeacon.beacon.MonitorNotifier;
+import org.altbeacon.beacon.RangeNotifier;
+import org.altbeacon.beacon.Region;
+import org.altbeacon.beacon.service.ArmaRssiFilter;
+import org.altbeacon.beacon.service.RunningAverageRssiFilter;
 
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 
 import java.util.ArrayList;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.Timer;
+import java.util.TimerTask;
 
-public class MusicPage extends AppCompatActivity implements onComplete, SideviewControl{
+public class MusicPage extends AppCompatActivity implements onComplete, BeaconConsumer, SideviewControl, RangeNotifier, MonitorNotifier{
 
     private boolean isPlaying;
     private int currentPlaying;
@@ -45,7 +63,6 @@ public class MusicPage extends AppCompatActivity implements onComplete, Sideview
     private ArrayList<Song> _songList;
     private ArrayList<TableRow> _songRow;
     private SocketConnection _connection;
-    private Context room = this;
 
     private Typeface icon;
 
@@ -57,6 +74,16 @@ public class MusicPage extends AppCompatActivity implements onComplete, Sideview
 
     private boolean needSongs;
     private onComplete postExecute = this;
+    private BeaconManager beaconManager;
+    private HashMap<String, Speaker> beacons = new HashMap<>();
+    private HashMap<String, ArrayList<Double>> calculation = new HashMap<>();
+    private String[] beaconAddress = {"0C:F3:EE:B3:B6:9F","0C:F3:EE:B3:B8:4E", "0C:F3:EE:B3:B8:3F", "0C:F3:EE:B3:B6:BE", "0C:F3:EE:B3:BB:54", "C2:00:10:00:01:55"};
+
+    private static final int PERMISSION_REQUEST_COARSE_LOCATION = 456;
+
+    private boolean followMode = true;
+    private double outOfRange = 1.5;
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -70,11 +97,67 @@ public class MusicPage extends AppCompatActivity implements onComplete, Sideview
         _connection = getSocket();
         icon = ResourcesCompat.getFont(MusicPage.this, R.font.icon);
         hostName = extractIp();
+
+        beacons.put("0C:F3:EE:B3:B6:9F", new Speaker("1", 0));
+        beacons.put("0C:F3:EE:B3:B8:4E", new Speaker("2", 0));
+        beacons.put("0C:F3:EE:B3:B8:3F", new Speaker("3", 0));
+        beacons.put("0C:F3:EE:B3:B6:BE", new Speaker("4", 0));
+        beacons.put("0C:F3:EE:B3:BB:54", new Speaker("test 1", 0));
+        beacons.put("C2:00:10:00:01:55", new Speaker("test 2", 0));
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            requestPermissions(new String[]{Manifest.permission.ACCESS_COARSE_LOCATION}, PERMISSION_REQUEST_COARSE_LOCATION);
+        }
+
         if(hostName.equals("INVALID")){
             _connection.executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR, "false", port, "getSongList");
         }else{
             _connection.executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR, "true", port, "getSongList", hostName);
         }
+        ToggleButton followModeControl = (ToggleButton) findViewById(R.id.enableFollow);
+        followModeControl.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+            public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
+                followMode = isChecked;
+            }
+        });
+        SeekBar calibration = (SeekBar)findViewById(R.id.calibrateFollow);
+        calibration.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
+            @Override
+            public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
+                outOfRange = (progress/100.0)*4.0;
+                TextView calibrateVal = (TextView)findViewById(R.id.calibrateValue);
+                calibrateVal.setText(Double.toString(outOfRange));
+            }
+
+            @Override
+            public void onStartTrackingTouch(SeekBar seekBar) {
+
+            }
+
+            @Override
+            public void onStopTrackingTouch(SeekBar seekBar) {
+
+            }
+        });
+
+        TimerTask _task = new TimerTask() {
+            @Override
+            public void run() {
+                for(String s: beaconAddress){
+                    if(calculation.containsKey(s) && calculation.get(s).size() > 5) {
+                        double decide = calculateAvg(calculation.get(s));
+                        Log.e("Beacon Calculation", beacons.get(s).getSpeakerId()+" distance rounded: "+Math.round(decide)+" actual calculation: "+decide);
+                        if (decide >= outOfRange) disableSpeaker(beacons.get(s));
+                        else enableSpeaker(beacons.get(s));
+                        calculation.put(s, new ArrayList<Double>());
+                    }
+                }
+            }
+        };
+        Timer timer = new Timer();
+        timer.schedule(_task, 1000L, 1000L);
+
+
     }
 
 
@@ -105,6 +188,154 @@ public class MusicPage extends AppCompatActivity implements onComplete, Sideview
         ((TextView) songInfo.getChildAt(0)).setTextColor(Color.WHITE);
         ((TextView) songInfo.getChildAt(1)).setTextColor(Color.WHITE);
         songBanner.setText("Playing: "+song.getTitle());
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, @NonNull String permissions[], @NonNull int[] grantResults) {
+        switch (requestCode) {
+            case PERMISSION_REQUEST_COARSE_LOCATION: {
+                if (grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+
+                    beaconManager = BeaconManager.getInstanceForApplication(this);
+
+                    beaconManager.getBeaconParsers().add(new BeaconParser()
+                            .setBeaconLayout(BeaconParser.EDDYSTONE_UID_LAYOUT));
+                    beaconManager.getBeaconParsers().add(new BeaconParser()
+                            .setBeaconLayout(BeaconParser.ALTBEACON_LAYOUT));
+                    beaconManager.getBeaconParsers().add(new BeaconParser()
+                            .setBeaconLayout("m:0-3=4c000215,i:4-19,i:20-21,i:22-23,p:24-24"));
+                    beaconManager.setRssiFilterImplClass(ArmaRssiFilter.class);
+                    beaconManager.bind(this);
+                } else {
+                    // Alert the user that this application requires the location permission to perform the scan.
+                    ToggleButton followModeControl = (ToggleButton) findViewById(R.id.enableFollow);
+                    followModeControl.setVisibility(View.INVISIBLE);
+                }
+            }
+        }
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        //beaconManager.unbind(this);
+    }
+
+    @Override
+    public void onBeaconServiceConnect() {
+
+        final Region regionSpeaker1 = new Region("1", "0C:F3:EE:B3:B6:9F");
+        final Region regionSpeaker2 = new Region("2", "0C:F3:EE:B3:B8:4E");
+        final Region regionSpeaker3 = new Region("3", "0C:F3:EE:B3:B8:3F");
+        final Region regionSpeaker4 = new Region("4", "0C:F3:EE:B3:B6:BE");
+        final Region regionSpeakerTest = new Region("Test", "0C:F3:EE:B3:BB:54");
+        final Region regionSpeakerTest2 = new Region("Test2", "C2:00:10:00:01:55");
+        final Region region = new Region("all-beacon", null, null, null);
+        try {
+            beaconManager.startMonitoringBeaconsInRegion(regionSpeaker1);
+            beaconManager.startMonitoringBeaconsInRegion(regionSpeaker2);
+            beaconManager.startMonitoringBeaconsInRegion(regionSpeaker3);
+            beaconManager.startMonitoringBeaconsInRegion(regionSpeaker4);
+
+
+            beaconManager.startRangingBeaconsInRegion(regionSpeaker1);
+            beaconManager.startRangingBeaconsInRegion(regionSpeaker2);
+            beaconManager.startRangingBeaconsInRegion(regionSpeaker3);
+            beaconManager.startRangingBeaconsInRegion(regionSpeaker4);
+            beaconManager.startRangingBeaconsInRegion(region);
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        beaconManager.addMonitorNotifier(this);
+        beaconManager.addRangeNotifier(this);
+
+    }
+
+    @Override
+    public void didEnterRegion(Region region) {
+
+    }
+
+    @Override
+    public void didExitRegion(final Region region) {
+        disableSpeaker(beacons.get(region.getBluetoothAddress()));
+        Log.e("Beacon Exit", "beacon exiting: "+region.getUniqueId());
+        //disable once more just incase...
+        TimerTask _task = new TimerTask() {
+            @Override
+            public void run() {
+                final Region _temp = region;
+                disableSpeaker(beacons.get(_temp.getBluetoothAddress()));
+            }
+        };
+        Timer timer = new Timer();
+        timer.schedule(_task, 1000L);
+    }
+
+    @Override
+    public void didDetermineStateForRegion(int i, Region region) {
+
+    }
+
+    @Override
+    public void didRangeBeaconsInRegion(Collection<Beacon> collection, Region region) {
+        if(followMode) {
+            for (Beacon beacon : collection) {
+                //Log.e("Beacon Distance", "distance: "+beacon.getDistance());
+                if(calculation.containsKey(beacon.getBluetoothAddress())){
+                    ArrayList<Double> list = calculation.get(beacon.getBluetoothAddress());
+                    list.add(beacon.getDistance());
+                }else{
+                    ArrayList<Double> _new = new ArrayList<>();
+                    _new.add(beacon.getDistance());
+                    calculation.put(beacon.getBluetoothAddress(), _new);
+                }
+            }
+        }
+    }
+    @Override
+    protected void onResume(){
+        super.onResume();
+        beaconManager = BeaconManager.getInstanceForApplication(this);
+
+        beaconManager.getBeaconParsers().add(new BeaconParser()
+                .setBeaconLayout(BeaconParser.EDDYSTONE_UID_LAYOUT));
+        beaconManager.getBeaconParsers().add(new BeaconParser()
+                .setBeaconLayout(BeaconParser.ALTBEACON_LAYOUT));
+        beaconManager.getBeaconParsers().add(new BeaconParser()
+                .setBeaconLayout("m:0-3=4c000215,i:4-19,i:20-21,i:22-23,p:24-24"));
+        beaconManager.setRssiFilterImplClass(ArmaRssiFilter.class);
+        beaconManager.bind(this);
+    }
+
+    @Override
+    protected void onPause(){
+        super.onPause();
+        beaconManager.unbind(this);
+    }
+
+    private double calculateAvg(ArrayList<Double> values){
+        Double ans = 0.0;
+
+        for(int i = values.size()-1; i >= values.size()-5; i--){
+            ans+= values.get(i);
+        }
+        return (ans/((double)values.size()));
+
+    }
+    private void enableSpeaker(Speaker speaker){
+        if(speaker.status == 1) return;
+        _connection = getSocket();
+        _connection.executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR, "true", port, "enableSpeaker " + speaker.getSpeakerId(), hostName);
+        //Log.e("SPEAKER CONTROL", "enableSpeaker " + speaker.getSpeakerId());
+    }
+
+    private void disableSpeaker(Speaker speaker){
+        if(speaker.status == 0) return;
+        _connection = getSocket();
+        _connection.executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR, "true", port, "disableSpeaker " + speaker.getSpeakerId(), hostName);
+        //Log.e("SPEAKER CONTROL", "disableSpeaker " + speaker.getSpeakerId());
     }
 
     public void addToSongList(final Song song){
@@ -211,12 +442,10 @@ public class MusicPage extends AppCompatActivity implements onComplete, Sideview
     public boolean onKeyDown(int keyCode, KeyEvent event){
 
         if(keyCode == KeyEvent.KEYCODE_VOLUME_DOWN){
-            //TODO: change volumes of speaker BRING IT DOWN
             _connection = getSocket();
             _connection.executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR, "true", port, "decVolume", hostName);
         }
         if(keyCode == KeyEvent.KEYCODE_VOLUME_UP){
-            //TODO: change volumes of speaker RISE IT UP
             _connection = getSocket();
             _connection.executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR, "true", port, "incVolume", hostName);
 
@@ -234,8 +463,12 @@ public class MusicPage extends AppCompatActivity implements onComplete, Sideview
 
     @Override
     public void onConfigurationChanged(Configuration newConfig){
+        super.onConfigurationChanged(newConfig);
         return;
     }
+
+
+
 
     /**
      * this method is needed to execute after you have sent the commands.
@@ -328,6 +561,15 @@ public class MusicPage extends AppCompatActivity implements onComplete, Sideview
                 }else{
                     isPlaying = true;
                     updateMusicControl();
+                }
+            }else if(res[1].contains("enableSpeaker") || res[1].contains("disableSpeaker")){
+                if(res[2].equals("true")) {
+                    String speakerId = res[1].split(" ")[1];
+                    for (String s : beaconAddress) {
+                        if(speakerId.equals(beacons.get(s).getSpeakerId())){
+                            beacons.get(s).toggleStat();
+                        }
+                    }
                 }
             }
             statusConnection.setText("status: Connected");
@@ -475,7 +717,7 @@ public class MusicPage extends AppCompatActivity implements onComplete, Sideview
     public void refreshConnection(View view) {
         Song.resetSongCount();
         _connection = getSocket();
-        _connection.executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR, "true", port, "getSongList", hostName);
+        _connection.executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR, "false", port, "getSongList", hostName);
     }
 
     private SocketConnection getSocket(){
