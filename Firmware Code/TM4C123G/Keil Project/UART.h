@@ -5,6 +5,8 @@
 #define ESC  0x1B
 #define SP   0x20
 #define DEL  0x7F
+#define ACK  0x06
+#define ENQ  0x05
 
 void UART0_Init(void);
 void UART1_Init(void);

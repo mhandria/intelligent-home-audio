@@ -39,8 +39,8 @@ void UART1_Init(void)
   UART1_CTL_R &= ~0x01;                 // disable UART
   // UART1_IBRD_R = 1;                     //  IBRD = floor(80,000,000 / (16 * 2,764,800)) = 1
   // UART1_FBRD_R = 52;                    //  FBRD = floor(0.80845 * 64 + 0.5) = 52
-  UART1_IBRD_R = 3;                     //  IBRD = floor(80,000,000 / (16 * 1,658,880)) = 3
-  UART1_FBRD_R = 1;                     //  FBRD = floor(fract * 64 + 0.5) = 1
+  UART1_IBRD_R = 4;                     //  IBRD = floor(80,000,000 / (16 * 1,203,005)) = 4
+  UART1_FBRD_R = 10;                     //  FBRD = floor(fract * 64 + 0.5) = 10
                                         // 8 bit word length (no parity bits, one stop bit, FIFOs)
   UART1_LCRH_R = (UART_LCRH_WLEN_8|UART_LCRH_FEN);
   UART1_CTL_R |= UART_CTL_UARTEN;       // enable UART
