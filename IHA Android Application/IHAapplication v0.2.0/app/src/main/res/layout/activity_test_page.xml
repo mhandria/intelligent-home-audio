@@ -26,5 +26,4 @@
             android:text="send"
             android:background="@drawable/button"/>
     </LinearLayout>
-
 </android.support.constraint.ConstraintLayout>

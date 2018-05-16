@@ -37,6 +37,10 @@
                 android:background="@drawable/button"
                 android:layout_marginBottom="5dp"
                 android:onClick="onSideviewOpen"/>
+            <ToggleButton
+                android:id="@+id/enableFollow"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content" />
             <ScrollView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"

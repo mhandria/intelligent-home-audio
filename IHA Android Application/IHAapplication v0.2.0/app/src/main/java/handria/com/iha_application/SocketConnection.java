@@ -88,10 +88,17 @@ public class SocketConnection extends AsyncTask<String, String, String[]> {
         String cmd = params[2];
         String hostName;
         ArrayList<String> response = new ArrayList<>();
+
         if(params[0].equals("true")){
             hostName = params[3];
         }else{
-            hostName = findIp(port);
+            try{
+                Socket _test = new Socket(params[3], port);
+                hostName = params[3];
+                _test.close();
+            }catch(Exception e) {
+                hostName = findIp(port);
+            }
         }
         response.add(hostName);
         response.add(cmd);
@@ -100,30 +107,13 @@ public class SocketConnection extends AsyncTask<String, String, String[]> {
         }catch(Exception e){
             Log.e("TIMEOUT FAILURE", "the sleep failed to setup");
         }
-        response.addAll(sendCmd(hostName, port, cmd, false));
-        //insert old ifelse statement here if above doesn't work properly.
+        response.addAll(sendCmd(hostName, port, cmd, 0, response));
         return response.toArray(new String[response.size()]);
     }
 
 
 
-    private String testConnection(String hostNames){
-        String correctHost = "";
-        //nested try catch to attempt socket connection.
-        try {
-            InetAddress address = InetAddress.getByName(hostNames);
-            boolean reachable = address.isReachable(1000);
-            if(reachable)
-                correctHost = hostNames;
-            else
-                throw new Exception();
-        }catch(Exception locSocket){
-            Log.e("Socket Attempt", "local host socket failed");
-        }
-        return correctHost;
-    }
-
-    private ArrayList<String> sendCmd(String hostName, int port, String cmd, boolean triedOnce){
+    private ArrayList<String> sendCmd(String hostName, int port, String cmd, int attempts, ArrayList<String> response){
         boolean validResponse = false;
         ArrayList<String> res = new ArrayList<>();
         res.add("false");
@@ -131,18 +121,34 @@ public class SocketConnection extends AsyncTask<String, String, String[]> {
             res.add("No CMD sent");
             return res;
         }
+        Socket socket;
+
         try {
-            Socket socket = new Socket(hostName, port);
+            socket = new Socket(hostName, port);
+        }catch(IOException socketFailure){
+            if(attempts < 5) {
+                String hostNameNew = hostName;
+                response.set(0, hostNameNew);
+                res = sendCmd(hostNameNew, port, cmd, attempts+1, response);
+            }else
+                res.add("ERROR:INVALID_CONNECTION");
+            return res;
+        }
+
+        try {
+
+            if(socket == null) socket = new Socket(hostName, port);
+
             BufferedReader buffRead = new BufferedReader(new InputStreamReader(socket.getInputStream()));
             PrintWriter out = new PrintWriter(socket.getOutputStream(), true);
             boolean status = true;
+
             if(cmd.equals("getSongList")) {
                 publishProgress("fetching songs");
                 boolean finishTx = false;
                 while (!finishTx) {
                     out.println(cmd);
                     long endTimeMillis = System.currentTimeMillis() + 10000;
-
                     while(!buffRead.ready()){
                         if(System.currentTimeMillis() >= endTimeMillis){
                             status = false;
@@ -209,7 +215,6 @@ public class SocketConnection extends AsyncTask<String, String, String[]> {
                         if (this.isCancelled()) return res;
                     }
                     if(!status) return res;
-                    //int ResponseCheck = buffRead.read();
                     validResponse = (buffRead.read() == ACK);
                     res.add(buffRead.readLine());
 
@@ -217,12 +222,8 @@ public class SocketConnection extends AsyncTask<String, String, String[]> {
             }
             if(validResponse) res.set(0, "true");
             socket.close();
-        }catch(IOException ex) {
-            if(!triedOnce)
-                res = sendCmd(findIp(port), port, cmd, true);
-            else
-                res.add("ERROR:INVALID_CONNECTION");
         }catch(Exception e){
+            res.add("ERROR:INVALID_CONNECTION");
             Log.e("Sending Cmd", "Something went wrong when trying to send a command");
         }
         return res;
@@ -276,7 +277,4 @@ public class SocketConnection extends AsyncTask<String, String, String[]> {
         }
         return hostName;
     }
-
-
-
 }
